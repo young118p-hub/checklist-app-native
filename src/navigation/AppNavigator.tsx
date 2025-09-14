@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 
 // Import screens
 import HomeScreen from '../screens/home/HomeScreen';
@@ -76,9 +77,25 @@ const TabNavigator = () => {
   );
 };
 
+const linking = {
+  prefixes: [Linking.createURL('/'), 'amajdaigeo://'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          Home: 'home',
+          MyChecklists: 'my-checklists',
+          Create: 'create',
+        },
+      },
+      ChecklistDetail: 'checklist/:id',
+    },
+  },
+} as const;
+
 export const AppNavigator = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {

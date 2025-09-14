@@ -104,6 +104,9 @@ export interface TemplateItem {
 export type RootStackParamList = {
   Main: undefined;
   ChecklistDetail: { id: string };
+  Home: undefined;
+  MyChecklists: undefined;
+  Create: undefined;
 };
 
 export type BottomTabParamList = {

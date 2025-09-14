@@ -9,8 +9,19 @@
     "newArchEnabled": true,
     "description": "한국 상황에 특화된 체크리스트 앱. 출장, 여행, 캠핑, 차박 등 다양한 상황별 템플릿과 AI 추천으로 깜빡할 뻔한 것들을 완벽하게 준비하세요!",
     "privacy": "public",
-    "platforms": ["ios", "android", "web"],
-    "keywords": ["checklist", "todo", "travel", "camping", "korean", "productivity"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "keywords": [
+      "checklist",
+      "todo",
+      "travel",
+      "camping",
+      "korean",
+      "productivity"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -37,6 +48,7 @@
       "package": "com.checklist.amajdaigeo",
       "versionCode": 1,
       "permissions": [
+        "android.permission.VIBRATE",
         "android.permission.VIBRATE"
       ],
       "edgeToEdgeEnabled": true
@@ -53,10 +65,18 @@
     "plugins": [
       "expo-haptics"
     ],
+    "scheme": "amajdaigeo",
     "extra": {
       "eas": {
-        "projectId": "checklist-app-native"
+        "projectId": "05c002d8-8023-45d0-8569-a3c18e207ec4"
       }
+    },
+    "owner": "edenqw1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/05c002d8-8023-45d0-8569-a3c18e207ec4"
     }
   }
 }

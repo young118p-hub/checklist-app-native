@@ -141,7 +141,10 @@ const ChecklistDetailScreen = () => {
         description,
         quantity: 1,
         unit: '',
-        order: currentChecklist.items.length
+        order: currentChecklist.items.length,
+        isCompleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
       Alert.alert('추가됨! 🎉', `"${title}"가 체크리스트에 추가되었습니다.`);
     } catch (error) {
@@ -187,7 +190,10 @@ const ChecklistDetailScreen = () => {
         description: newItemDescription.trim(),
         quantity: 1,
         unit: '',
-        order: currentChecklist.items.length
+        order: currentChecklist.items.length,
+        isCompleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
       
       setNewItemTitle('');
@@ -261,7 +267,7 @@ const ChecklistDetailScreen = () => {
   );
 
   // FlatList 렌더링 최적화
-  const renderChecklistItem = useCallback(({ item }) => (
+  const renderChecklistItem = useCallback(({ item }: { item: any }) => (
     <ChecklistItemComponent
       item={item}
       onToggle={handleItemToggle}
@@ -270,7 +276,7 @@ const ChecklistDetailScreen = () => {
     />
   ), [handleItemToggle, handleDeleteItem]);
 
-  const keyExtractor = useCallback((item) => item.id, []);
+  const keyExtractor = useCallback((item: any) => item.id, []);
 
   return (
     <View style={styles.container}>

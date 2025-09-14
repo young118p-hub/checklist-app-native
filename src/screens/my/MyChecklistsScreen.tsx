@@ -34,6 +34,8 @@ const MyChecklistsScreen = () => {
     loadFromStorage 
   } = useChecklistStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'completed' | 'incomplete'>('all');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -83,7 +85,7 @@ const MyChecklistsScreen = () => {
   }, [deleteChecklist]);
 
   // FlatList 렌더링 최적화
-  const renderChecklistCard = useCallback(({ item }) => (
+  const renderChecklistCard = useCallback(({ item }: { item: any }) => (
     <ChecklistCard
       checklist={item}
       onPress={() => handleChecklistPress(item.id)}
@@ -92,7 +94,33 @@ const MyChecklistsScreen = () => {
     />
   ), [handleChecklistPress, handleEditTitle]);
 
-  const keyExtractor = useCallback((item) => item.id, []);
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
+  // 검색 및 필터링된 체크리스트
+  const filteredChecklists = useMemo(() => {
+    let filtered = checklists || [];
+
+    // 검색어 필터링
+    if (searchTerm) {
+      filtered = filtered.filter(checklist =>
+        checklist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (checklist.description && checklist.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // 완료 상태 필터링
+    if (filterType !== 'all') {
+      filtered = filtered.filter(checklist => {
+        const completedItems = checklist.items.filter(item => item.isCompleted).length;
+        const totalItems = checklist.items.length;
+        const isCompleted = totalItems > 0 && completedItems === totalItems;
+
+        return filterType === 'completed' ? isCompleted : !isCompleted;
+      });
+    }
+
+    return filtered;
+  }, [checklists, searchTerm, filterType]);
 
   if (error) {
     return (
@@ -138,15 +166,72 @@ const MyChecklistsScreen = () => {
         <>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
-              내 체크리스트 ({checklists.length})
+              내 체크리스트 ({filteredChecklists.length})
             </Text>
             <Text style={styles.headerSubtitle}>
               완료한 항목들을 체크해보세요
             </Text>
+
+            {/* 검색바 */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="체크리스트 검색..."
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            {/* 필터 버튼들 */}
+            <View style={styles.filterContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  filterType === 'all' && styles.filterButtonActive
+                ]}
+                onPress={() => setFilterType('all')}
+              >
+                <Text style={[
+                  styles.filterButtonText,
+                  filterType === 'all' && styles.filterButtonTextActive
+                ]}>
+                  전체
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  filterType === 'incomplete' && styles.filterButtonActive
+                ]}
+                onPress={() => setFilterType('incomplete')}
+              >
+                <Text style={[
+                  styles.filterButtonText,
+                  filterType === 'incomplete' && styles.filterButtonTextActive
+                ]}>
+                  진행중
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  filterType === 'completed' && styles.filterButtonActive
+                ]}
+                onPress={() => setFilterType('completed')}
+              >
+                <Text style={[
+                  styles.filterButtonText,
+                  filterType === 'completed' && styles.filterButtonTextActive
+                ]}>
+                  완료
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <FlatList
-            data={checklists}
+            data={filteredChecklists}
             renderItem={renderChecklistCard}
             keyExtractor={keyExtractor}
             style={styles.scrollView}
@@ -263,6 +348,43 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  searchContainer: {
+    marginTop: 16,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterButtonActive: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterButtonTextActive: {
+    color: 'white',
   },
 });
 

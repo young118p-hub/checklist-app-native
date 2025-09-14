@@ -10,6 +10,7 @@ import {
   Platform,
   TouchableOpacity,
   FlatList,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -22,6 +23,7 @@ import { TemplateCard } from '../../components/checklist/TemplateCard';
 import { PopularTemplateCard } from '../../components/checklist/PopularTemplateCard';
 import { NotificationCenter } from '../../components/ui/NotificationCenter';
 import { smartSearch } from '../../utils/smartSearch';
+import { parseSharedChecklist, validateSharedChecklistData } from '../../utils/shareUtils';
 import { RootStackParamList } from '../../types';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
@@ -38,6 +40,12 @@ const HomeScreen = () => {
   } = useChecklistStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importValidation, setImportValidation] = useState<{
+    isValid: boolean;
+    message: string;
+  }>({ isValid: false, message: '' });
 
   const handleUseTemplate = useCallback(async (templateId: string) => {
     const template = SITUATION_TEMPLATES.find(t => t.id === templateId);
@@ -72,7 +80,7 @@ const HomeScreen = () => {
         [
           {
             text: '확인',
-            onPress: () => navigation.navigate('MyChecklists' as any),
+            onPress: () => navigation.navigate('MyChecklists'),
           },
         ]
       );
@@ -90,7 +98,7 @@ const HomeScreen = () => {
           navigation.navigate('ChecklistDetail', { id: notification.actionData.checklistId });
           break;
         case 'view_my_checklists':
-          navigation.navigate('MyChecklists' as any);
+          navigation.navigate('MyChecklists');
           break;
         case 'browse_templates':
           setSearchTerm('');
@@ -98,6 +106,109 @@ const HomeScreen = () => {
       }
     }
     setShowNotificationCenter(false);
+  };
+
+  const validateImportText = (text: string) => {
+    if (!text.trim()) {
+      setImportValidation({ isValid: false, message: '' });
+      return;
+    }
+
+    try {
+      const sharedData = parseSharedChecklist(text.trim());
+      if (!sharedData || !validateSharedChecklistData(sharedData)) {
+        setImportValidation({
+          isValid: false,
+          message: '올바른 공유 데이터가 아닙니다. 아맞다이거! 앱에서 생성된 공유 링크를 입력해 주세요.'
+        });
+        return;
+      }
+
+      setImportValidation({
+        isValid: true,
+        message: `"${sharedData.title}" 체크리스트를 가져올 수 있습니다.`
+      });
+    } catch (error) {
+      setImportValidation({
+        isValid: false,
+        message: '데이터 형식이 올바르지 않습니다.'
+      });
+    }
+  };
+
+  const handleImportTextChange = (text: string) => {
+    setImportText(text);
+    validateImportText(text);
+  };
+
+  const handleImportSharedChecklist = async () => {
+    if (!importText.trim()) {
+      Alert.alert('오류', '공유받은 텍스트를 입력해 주세요.');
+      return;
+    }
+
+    try {
+      const sharedData = parseSharedChecklist(importText.trim());
+
+      if (!sharedData || !validateSharedChecklistData(sharedData)) {
+        Alert.alert('오류', '올바른 공유 데이터가 아닙니다. 아맞다이거! 앱에서 생성된 공유 링크나 데이터를 입력해 주세요.');
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // 공유받은 데이터를 체크리스트로 변환
+      const checklistData = {
+        title: `${sharedData.title} (공유받음)`,
+        description: sharedData.description || `${sharedData.sharedBy}님이 공유한 체크리스트`,
+        isTemplate: false,
+        isPublic: false,
+        peopleCount: 1,
+        categoryId: undefined,
+        items: sharedData.items.map((item, index) => ({
+          title: item.title,
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unit: item.unit || '',
+          order: item.order
+        }))
+      };
+
+      await createChecklist(checklistData);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowImportModal(false);
+      setImportText('');
+      setImportValidation({ isValid: false, message: '' });
+
+      Alert.alert(
+        '성공! 🎉',
+        '공유받은 체크리스트가 내 체크리스트에 추가되었습니다.',
+        [
+          {
+            text: '확인',
+            onPress: () => navigation.navigate('MyChecklists'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Import checklist error:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+      let errorMessage = '공유받은 체크리스트 가져오기에 실패했습니다.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage += ' 네트워크 연결을 확인해 주세요.';
+        } else if (error.message.includes('storage')) {
+          errorMessage += ' 저장 공간을 확인해 주세요.';
+        } else {
+          errorMessage += ' 잠시 후 다시 시도해 주세요.';
+        }
+      }
+
+      Alert.alert('가져오기 실패', errorMessage);
+    }
   };
 
   // 스마트 검색 적용 (useMemo로 최적화)
@@ -123,7 +234,7 @@ const HomeScreen = () => {
   );
 
   // FlatList 렌더링 최적화
-  const renderTemplateCard = useCallback(({ item }) => (
+  const renderTemplateCard = useCallback(({ item }: { item: any }) => (
     <TemplateCard
       template={item}
       onUseTemplate={handleUseTemplate}
@@ -131,7 +242,7 @@ const HomeScreen = () => {
     />
   ), [handleUseTemplate, loading]);
 
-  const renderPopularCard = useCallback(({ item }) => (
+  const renderPopularCard = useCallback(({ item }: { item: any }) => (
     <PopularTemplateCard
       template={item}
       onUseTemplate={handleUseTemplate}
@@ -139,7 +250,7 @@ const HomeScreen = () => {
     />
   ), [handleUseTemplate, loading]);
 
-  const keyExtractor = useCallback((item) => item.id, []);
+  const keyExtractor = useCallback((item: any) => item.id, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,26 +260,41 @@ const HomeScreen = () => {
           <View style={styles.headerContent}>
             <Text style={styles.title}>아맞다이거! 🤦‍♂️</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.notificationButton} 
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setShowNotificationCenter(true);
-            }}
-          >
-            <Ionicons 
-              name="notifications" 
-              size={24} 
-              color="white" 
-            />
-            {getUnreadNotificationCount() > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {getUnreadNotificationCount()}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.importButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowImportModal(true);
+              }}
+            >
+              <Ionicons
+                name="download"
+                size={20}
+                color="white"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowNotificationCenter(true);
+              }}
+            >
+              <Ionicons
+                name="notifications"
+                size={24}
+                color="white"
+              />
+              {getUnreadNotificationCount() > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {getUnreadNotificationCount()}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={styles.subtitle}>
           깜빡할 뻔한 모든 것들을 한 번에! 로그인 없이 바로 사용하세요
@@ -179,6 +305,9 @@ const HomeScreen = () => {
           </View>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>🇰🇷 한국 상황 특화</Text>
+          </View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>📤 체크리스트 공유</Text>
           </View>
         </View>
       </View>
@@ -270,6 +399,97 @@ const HomeScreen = () => {
         onMarkAsRead={markNotificationAsRead}
         onClearAll={clearAllNotifications}
       />
+
+      {/* Import Shared Checklist Modal */}
+      <Modal
+        visible={showImportModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowImportModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>공유받은 체크리스트 가져오기</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowImportModal(false);
+                setImportText('');
+                setImportValidation({ isValid: false, message: '' });
+              }}
+              style={styles.modalCloseButton}
+            >
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <Text style={styles.modalDescription}>
+              친구나 가족이 공유한 체크리스트 링크나 텍스트를 아래에 붙여넣기 해주세요.
+            </Text>
+
+            <View style={styles.instructionCard}>
+              <Text style={styles.instructionTitle}>💡 사용 방법</Text>
+              <Text style={styles.instructionText}>
+                1. 공유받은 링크 (amajdaigeo://...)를 붙여넣기{'\n'}
+                2. 또는 JSON 형태의 체크리스트 데이터 붙여넣기{'\n'}
+                3. 자동으로 검증 후 가져오기 버튼이 활성화됩니다
+              </Text>
+            </View>
+
+            <TextInput
+              style={styles.importTextArea}
+              placeholder="amajdaigeo://import-checklist?data=... 또는 JSON 데이터를 붙여넣기"
+              value={importText}
+              onChangeText={handleImportTextChange}
+              multiline
+              textAlignVertical="top"
+              placeholderTextColor="#9CA3AF"
+            />
+
+            {/* Validation Message */}
+            {importValidation.message && (
+              <View style={[
+                styles.validationMessage,
+                importValidation.isValid ? styles.validMessage : styles.errorMessage
+              ]}>
+                <Text style={[
+                  styles.validationText,
+                  importValidation.isValid ? styles.validText : styles.errorText
+                ]}>
+                  {importValidation.isValid ? '✅' : '❌'} {importValidation.message}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowImportModal(false);
+                  setImportText('');
+                  setImportValidation({ isValid: false, message: '' });
+                }}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.importModalButton,
+                  (!importText.trim() || !importValidation.isValid) && styles.disabledButton
+                ]}
+                onPress={handleImportSharedChecklist}
+                disabled={!importText.trim() || !importValidation.isValid}
+              >
+                <Text style={[
+                  styles.importButtonText,
+                  (!importText.trim() || !importValidation.isValid) && styles.disabledButtonText
+                ]}>가져오기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -292,6 +512,16 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  importButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
   },
   notificationButton: {
     position: 'relative',
@@ -334,6 +564,7 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   badge: {
@@ -424,6 +655,125 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  instructionCard: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#0EA5E9',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  instructionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0369A1',
+    marginBottom: 8,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#0369A1',
+    lineHeight: 20,
+  },
+  importTextArea: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    backgroundColor: 'white',
+    minHeight: 100,
+    maxHeight: 150,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  importModalButton: {
+    backgroundColor: '#DC2626',
+  },
+  importButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+  },
+  disabledButtonText: {
+    color: '#D1D5DB',
+  },
+  validationMessage: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  validMessage: {
+    backgroundColor: '#D1FAE5',
+    borderColor: '#10B981',
+    borderWidth: 1,
+  },
+  errorMessage: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },
+  validationText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  validText: {
+    color: '#047857',
+  },
+  errorText: {
+    color: '#DC2626',
   },
 });
 

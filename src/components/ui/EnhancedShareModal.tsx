@@ -10,8 +10,10 @@ import {
   Share,
   Dimensions,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Checklist } from '../../types';
+import { shareChecklist } from '../../utils/shareUtils';
 
 interface EnhancedShareModalProps {
   visible: boolean;
@@ -21,16 +23,22 @@ interface EnhancedShareModalProps {
 
 const shareFormats = [
   {
-    id: 'simple',
-    title: '간단한 목록',
-    description: '체크박스와 함께 깔끔한 텍스트',
-    emoji: '📝',
+    id: 'advanced',
+    title: '체크리스트 공유',
+    description: '친구가 바로 가져올 수 있는 링크',
+    emoji: '🔗',
   },
   {
     id: 'detailed',
     title: '상세 정보 포함',
     description: '진행률과 설명까지 모든 정보',
     emoji: '📊',
+  },
+  {
+    id: 'simple',
+    title: '간단한 목록',
+    description: '체크박스와 함께 깔끔한 텍스트',
+    emoji: '📝',
   },
   {
     id: 'markdown',
@@ -51,7 +59,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
   onClose,
   checklist,
 }) => {
-  const [selectedFormat, setSelectedFormat] = useState('detailed');
+  const [selectedFormat, setSelectedFormat] = useState('advanced');
 
   const generateShareText = (format: string): string => {
     const completedItems = checklist.items.filter(item => item.isCompleted);
@@ -59,6 +67,13 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
     const progress = Math.round((completedItems.length / totalItems) * 100);
 
     switch (format) {
+      case 'advanced':
+        return `📝 ${checklist.title}\n\n✅ 진행률: ${completedItems.length}/${totalItems} (${progress}%)\n\n${checklist.description ? `📄 ${checklist.description}\n\n` : ''}📋 체크리스트:\n${checklist.items.map((item, index) =>
+          `${index + 1}. ${item.isCompleted ? '✅' : '☐'} ${item.title}${
+            item.quantity && item.quantity > 1 ? ` (${item.quantity}${item.unit || ''})` : ''
+          }${item.description ? `\n   💬 ${item.description}` : ''}`
+        ).join('\n')}\n\n🚀 아맞다이거! 앱에서 생성됨\n\n📱 이 체크리스트를 바로 가져오려면:\n1. 아맞다이거! 앱을 다운로드하세요\n2. 홈 화면 오른쪽 위 다운로드 버튼을 누르세요\n3. 이 메시지를 복사해서 붙여넣기 하세요`;
+
       case 'simple':
         return `${checklist.title}\n\n${checklist.items.map((item, index) => 
           `${item.isCompleted ? '✅' : '☐'} ${item.title}`
@@ -88,16 +103,35 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
 
   const handleShare = async (format: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+
     try {
-      const shareText = generateShareText(format);
-      await Share.share({
-        message: shareText,
-        title: checklist.title,
-      });
-      onClose();
+      if (format === 'advanced') {
+        const success = await shareChecklist(checklist);
+        if (success) {
+          onClose();
+        }
+      } else {
+        const shareText = generateShareText(format);
+        await Share.share({
+          message: shareText,
+          title: checklist.title,
+        });
+        onClose();
+      }
     } catch (error) {
       Alert.alert('오류', '공유에 실패했습니다.');
+    }
+  };
+
+  const handleCopyToClipboard = async (format: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const shareText = generateShareText(format);
+      await Clipboard.setStringAsync(shareText);
+      Alert.alert('복사 완료! 📋', '클립보드에 복사되었습니다.');
+    } catch (error) {
+      Alert.alert('오류', '클립보드 복사에 실패했습니다.');
     }
   };
 
@@ -164,6 +198,14 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
         </ScrollView>
 
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.copyButton}
+            onPress={() => handleCopyToClipboard(selectedFormat)}
+          >
+            <Text style={styles.copyButtonText}>
+              📋 복사하기
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.shareButton}
             onPress={() => handleShare(selectedFormat)}
@@ -295,12 +337,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   actions: {
+    flexDirection: 'row',
     padding: 20,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
+    gap: 12,
+  },
+  copyButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  copyButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
   },
   shareButton: {
+    flex: 1,
     backgroundColor: '#DC2626',
     borderRadius: 12,
     paddingVertical: 16,

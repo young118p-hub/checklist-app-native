@@ -6,19 +6,26 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "env": {
+        "NODE_OPTIONS": "--no-experimental-strip-types"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "NODE_OPTIONS": "--no-experimental-strip-types"
       }
     },
     "production": {
       "channel": "production",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "NODE_OPTIONS": "--no-experimental-strip-types"
       }
     }
   },
