@@ -16,7 +16,15 @@
       "Bash(set NODE_OPTIONS=--no-experimental-strip-types)",
       "Bash(eas:*)",
       "Bash(npm run build:*)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(npx eas build:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run start:*)",
+      "Bash(npm run prebuild:*)",
+      "Bash(npm run android:*)",
+      "Bash(\"C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\")",
+      "Bash(\"C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\" \"C:\\Users\\My\\Desktop\\git\\checklist-app-native\\android\")",
+      "Bash(\"D:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\" \"C:\\Users\\My\\Desktop\\git\\checklist-app-native\\android\")"
     ],
     "deny": [],
     "ask": []

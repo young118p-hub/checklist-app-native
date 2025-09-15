@@ -62,9 +62,7 @@
       "themeColor": "#DC2626",
       "backgroundColor": "#ffffff"
     },
-    "plugins": [
-      "expo-haptics"
-    ],
+    "plugins": [],
     "scheme": "amajdaigeo",
     "extra": {
       "eas": {

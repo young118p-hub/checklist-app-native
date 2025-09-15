@@ -1,0 +1,87 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+
+react {
+    entryFile = file("../../index.js")
+    reactNativeDir = file("../../node_modules/react-native")
+    hermesCommand = "../../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir = file("../../node_modules/@react-native/codegen")
+    cliFile = file("../../node_modules/@react-native-community/cli/build/bin.js")
+
+    debuggableVariants = ["debug"]
+
+    bundleCommand = "bundle"
+    bundleConfig = file(file("../../metro.config.js"))
+    bundleAssetName = "index.android.bundle"
+    entryFile = file("../../index.js")
+    extraPackagerArgs = []
+
+    nodeExecutableAndArgs = ["node"]
+
+    bundleInDebug = false
+    bundleInRelease = true
+    bundleInStaging = true
+
+    deleteDebugFilesForVariant = false
+
+    devDisabledInStaging = false
+    devDisabledInRelease = true
+
+    root = "../../"
+    inputExcludes = ["android/**", "ios/**"]
+    enableHermes = true
+}
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace 'com.checklist.amajdaigeo'
+
+    defaultConfig {
+        applicationId 'com.checklist.amajdaigeo'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        buildConfigField("boolean", "REACT_NATIVE_UNSTABLE_USE_RUNTIME_SCHEDULER_ALWAYS", "true")
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:flipper-integration")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}
+
+apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+applyNativeModulesAppBuildGradle(project)
