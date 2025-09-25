@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Platform,
   FlatList,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -285,14 +287,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  scrollView: {
-    flex: 1,
-    ...(Platform.OS === 'web' && {
-      overflow: 'scroll',
-      WebkitOverflowScrolling: 'touch',
-      maxHeight: 'calc(100vh - 150px)',
-    }),
-  },
+  scrollView: Platform.select({
+    web: {
+      flex: 1,
+      overflow: 'scroll' as any,
+      WebkitOverflowScrolling: 'touch' as any,
+      maxHeight: 'calc(100vh - 150px)' as any,
+    },
+    default: {
+      flex: 1,
+    },
+  }),
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,

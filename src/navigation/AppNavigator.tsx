@@ -91,7 +91,7 @@ const linking = {
       ChecklistDetail: 'checklist/:id',
     },
   },
-} as const;
+};
 
 export const AppNavigator = () => {
   return (

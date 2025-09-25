@@ -24,7 +24,16 @@
       "Bash(npm run android:*)",
       "Bash(\"C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\")",
       "Bash(\"C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\" \"C:\\Users\\My\\Desktop\\git\\checklist-app-native\\android\")",
-      "Bash(\"D:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\" \"C:\\Users\\My\\Desktop\\git\\checklist-app-native\\android\")"
+      "Bash(\"D:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe\" \"C:\\Users\\My\\Desktop\\git\\checklist-app-native\\android\")",
+      "Bash(./gradlew:*)",
+      "Bash(gradlew:*)",
+      "Bash(.gradlew.bat --version)",
+      "Bash(.gradlew assembleDebug)",
+      "Bash(findstr:*)",
+      "Bash(npx react-native:*)",
+      "Bash(npm run web:*)",
+      "Bash(npx eas:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

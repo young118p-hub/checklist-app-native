@@ -59,6 +59,24 @@ const ChecklistDetailScreen = () => {
     fetchChecklist(id);
   }, [id]);
 
+  // 정렬된 아이템들 (useMemo로 최적화) - early return 전에 선언
+  const sortedItems = useMemo(() =>
+    currentChecklist?.items?.sort((a, b) => a.order - b.order) || [],
+    [currentChecklist?.items]
+  );
+
+  // FlatList 렌더링 최적화 - early return 전에 선언
+  const renderChecklistItem = useCallback(({ item }: { item: any }) => (
+    <ChecklistItemComponent
+      item={item}
+      onToggle={handleItemToggle}
+      onDelete={handleDeleteItem}
+      showDeleteButton={true}
+    />
+  ), []);
+
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
   useEffect(() => {
     if (currentChecklist) {
       navigation.setOptions({
@@ -260,24 +278,6 @@ const ChecklistDetailScreen = () => {
   const totalItems = currentChecklist.items.length;
   const progress = totalItems > 0 ? (completedItems.length / totalItems) * 100 : 0;
 
-  // 정렬된 아이템들 (useMemo로 최적화)
-  const sortedItems = useMemo(() => 
-    currentChecklist.items.sort((a, b) => a.order - b.order),
-    [currentChecklist.items]
-  );
-
-  // FlatList 렌더링 최적화
-  const renderChecklistItem = useCallback(({ item }: { item: any }) => (
-    <ChecklistItemComponent
-      item={item}
-      onToggle={handleItemToggle}
-      onDelete={handleDeleteItem}
-      showDeleteButton={true}
-    />
-  ), [handleItemToggle, handleDeleteItem]);
-
-  const keyExtractor = useCallback((item: any) => item.id, []);
-
   return (
     <View style={styles.container}>
       {/* Progress Header */}
@@ -429,15 +429,19 @@ const ChecklistDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    ...(Platform.OS === 'web' && {
-      height: '100vh',
-      display: 'flex',
+  container: Platform.select({
+    web: {
+      flex: 1,
+      backgroundColor: '#F9FAFB',
+      height: '100vh' as any,
+      display: 'flex' as any,
       flexDirection: 'column',
-    }),
-  },
+    },
+    default: {
+      flex: 1,
+      backgroundColor: '#F9FAFB',
+    },
+  }),
   progressCard: {
     margin: 16,
     marginBottom: 8,
@@ -485,14 +489,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontStyle: 'italic',
   },
-  scrollView: {
-    flex: 1,
-    ...(Platform.OS === 'web' && {
-      overflow: 'scroll',
-      WebkitOverflowScrolling: 'touch',
-      maxHeight: 'calc(100vh - 200px)',
-    }),
-  },
+  scrollView: Platform.select({
+    web: {
+      flex: 1,
+      overflow: 'scroll' as any,
+      WebkitOverflowScrolling: 'touch' as any,
+      maxHeight: 'calc(100vh - 200px)' as any,
+    },
+    default: {
+      flex: 1,
+    },
+  }),
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
