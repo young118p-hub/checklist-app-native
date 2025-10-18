@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useChecklistStore } from './src/stores/checklistStore';
 import { ErrorBoundary } from './src/components/ui/ErrorBoundary';
 import { OfflineNotice } from './src/components/ui/OfflineNotice';
-import * as Linking from 'expo-linking';
 import { parseSharedChecklist, validateSharedChecklistData } from './src/utils/shareUtils';
 
 export default function App() {

@@ -33,7 +33,16 @@
       "Bash(npx react-native:*)",
       "Bash(npm run web:*)",
       "Bash(npx eas:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(dir:*)",
+      "Bash(xargs sed:*)",
+      "Bash(npx:*)",
+      "Bash(where java)",
+      "WebFetch(domain:expo.dev)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

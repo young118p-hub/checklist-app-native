@@ -7,7 +7,7 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from "expo-haptics";
 import { SmartNotification } from '../../types';
 
 interface NotificationCenterProps {
@@ -79,7 +79,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const unreadCount = notifications.filter(n => !n.isRead).length;
   
   const handleNotificationPress = (notification: SmartNotification) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
     if (!notification.isRead) {
       onMarkAsRead(notification.id);
     }
@@ -87,7 +87,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   };
 
   const handleClearAll = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
     onClearAll();
   };
 

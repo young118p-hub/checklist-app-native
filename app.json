@@ -6,21 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "description": "한국 상황에 특화된 체크리스트 앱. 출장, 여행, 캠핑, 차박 등 다양한 상황별 템플릿과 AI 추천으로 깜빡할 뻔한 것들을 완벽하게 준비하세요!",
     "privacy": "public",
     "platforms": [
       "ios",
       "android",
       "web"
-    ],
-    "keywords": [
-      "checklist",
-      "todo",
-      "travel",
-      "camping",
-      "korean",
-      "productivity"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -37,8 +28,12 @@
       "infoPlist": {
         "CFBundleDisplayName": "아맞다이거!",
         "NSCameraUsageDescription": "체크리스트 항목 사진 촬영을 위해 카메라 권한이 필요합니다.",
-        "NSPhotoLibraryUsageDescription": "체크리스트와 관련된 사진을 선택하기 위해 갤러리 접근이 필요합니다."
-      }
+        "NSPhotoLibraryUsageDescription": "체크리스트와 관련된 사진을 선택하기 위해 갤러리 접근이 필요합니다.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        }
+      },
+      "icon": "./assets/icon.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -46,14 +41,10 @@
         "backgroundColor": "#DC2626"
       },
       "package": "com.checklist.amajdaigeo",
-      "versionCode": 8,
+      "versionCode": 11,
       "permissions": [
         "android.permission.VIBRATE"
-      ],
-      "compileSdkVersion": 35,
-      "targetSdkVersion": 35,
-      "buildToolsVersion": "35.0.0",
-      "minSdkVersion": 23
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -64,7 +55,17 @@
       "themeColor": "#DC2626",
       "backgroundColor": "#ffffff"
     },
-    "plugins": [],
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 35
+          }
+        }
+      ]
+    ],
     "scheme": "amajdaigeo",
     "extra": {
       "eas": {

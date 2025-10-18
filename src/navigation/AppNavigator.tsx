@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
+import { Linking } from 'react-native';
 
 // Import screens
 import HomeScreen from '../screens/home/HomeScreen';

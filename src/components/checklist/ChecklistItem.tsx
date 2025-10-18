@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import * as Haptics from 'expo-haptics';
+// // import * as Haptics from "expo-haptics";
 import { ChecklistItem as ChecklistItemType } from '../../types';
 
 interface ChecklistItemProps {
@@ -22,7 +22,7 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
   
   const handleToggle = () => {
     // 햅틱 피드백
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
     
     // 체크 애니메이션
     Animated.sequence([

@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from "expo-haptics";
 
 import { SITUATION_TEMPLATES, POPULAR_TEMPLATES, calculateQuantity } from '../../constants/templates';
 import { useChecklistStore } from '../../stores/checklistStore';
@@ -52,7 +52,7 @@ const HomeScreen = () => {
     if (!template) return;
 
     // Haptic feedback for template selection
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
 
     const checklistData = {
       title: template.name,
@@ -73,7 +73,7 @@ const HomeScreen = () => {
     try {
       await createChecklist(checklistData);
       // Success haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         '체크리스트 생성 완료!',
         `${template.name} 체크리스트가 생성되었습니다.`,
@@ -86,7 +86,7 @@ const HomeScreen = () => {
       );
     } catch (error) {
       // Error haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Error);
       Alert.alert('오류', '체크리스트 생성에 실패했습니다.');
     }
   }, [createChecklist, navigation]);
@@ -155,7 +155,7 @@ const HomeScreen = () => {
         return;
       }
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
 
       // 공유받은 데이터를 체크리스트로 변환
       const checklistData = {
@@ -176,7 +176,7 @@ const HomeScreen = () => {
 
       await createChecklist(checklistData);
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
       setShowImportModal(false);
       setImportText('');
       setImportValidation({ isValid: false, message: '' });
@@ -193,7 +193,7 @@ const HomeScreen = () => {
       );
     } catch (error) {
       console.error('Import checklist error:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Error);
 
       let errorMessage = '공유받은 체크리스트 가져오기에 실패했습니다.';
 
@@ -264,7 +264,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={styles.importButton}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
                 setShowImportModal(true);
               }}
             >
@@ -277,7 +277,7 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={styles.notificationButton}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
                 setShowNotificationCenter(true);
               }}
             >

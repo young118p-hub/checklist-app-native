@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from "expo-haptics";
 
 import { useChecklistStore } from '../../stores/checklistStore';
 import { ChecklistCard } from '../../components/checklist/ChecklistCard';
@@ -52,7 +52,7 @@ const MyChecklistsScreen = () => {
   };
 
   const handleChecklistPress = useCallback((checklistId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('ChecklistDetail', { id: checklistId });
   }, [navigation]);
 
@@ -65,7 +65,7 @@ const MyChecklistsScreen = () => {
   };
 
   const handleDeleteChecklist = useCallback((checklistId: string, title: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       '체크리스트 삭제',
       `"${title}" 체크리스트를 정말 삭제하시겠습니까?`,
@@ -78,7 +78,7 @@ const MyChecklistsScreen = () => {
           text: '삭제',
           style: 'destructive',
           onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
             deleteChecklist(checklistId);
           },
         },

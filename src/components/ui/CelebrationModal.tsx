@@ -8,7 +8,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from "expo-haptics";
 
 interface CelebrationModalProps {
   visible: boolean;
@@ -29,7 +29,7 @@ export const CelebrationModal: React.FC<CelebrationModalProps> = ({
   useEffect(() => {
     if (visible) {
       // 축하 햅틱 피드백
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
 
       // 축하 애니메이션
       Animated.parallel([

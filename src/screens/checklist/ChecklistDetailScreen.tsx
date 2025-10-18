@@ -14,7 +14,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from "expo-haptics";
 
 import { useChecklistStore } from '../../stores/checklistStore';
 import { ChecklistItemComponent } from '../../components/checklist/ChecklistItem';
@@ -116,10 +116,10 @@ const ChecklistDetailScreen = () => {
     // Haptic feedback based on completion state
     if (item.isCompleted) {
       // Item is being unchecked
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
     } else {
       // Item is being checked
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
     }
     
     const oldCompletedCount = currentChecklist.items.filter(item => item.isCompleted).length;
@@ -137,7 +137,7 @@ const ChecklistDetailScreen = () => {
         (completionRate >= 50 && previousCompletionRate < 50)
       )) {
         // Celebration haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
         setTimeout(() => setShowCelebration(true), 300);
         
         // 100% 완료 시 analytics 기록

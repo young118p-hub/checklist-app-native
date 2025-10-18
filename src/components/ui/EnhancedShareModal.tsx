@@ -10,8 +10,8 @@ import {
   Share,
   Dimensions,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+// import * as Clipboard from "expo-clipboard";
+// import * as Haptics from "expo-haptics";
 import { Checklist } from '../../types';
 import { shareChecklist } from '../../utils/shareUtils';
 
@@ -102,7 +102,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
   };
 
   const handleShare = async (format: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       if (format === 'advanced') {
@@ -124,11 +124,11 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
   };
 
   const handleCopyToClipboard = async (format: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
 
     try {
       const shareText = generateShareText(format);
-      await Clipboard.setStringAsync(shareText);
+      await // Clipboard.setStringAsync(shareText);
       Alert.alert('복사 완료! 📋', '클립보드에 복사되었습니다.');
     } catch (error) {
       Alert.alert('오류', '클립보드 복사에 실패했습니다.');
@@ -136,7 +136,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
   };
 
   const handleFormatSelect = (formatId: string) => {
-    Haptics.selectionAsync();
+    // Haptics.selectionAsync();
     setSelectedFormat(formatId);
   };
 
