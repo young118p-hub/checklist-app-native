@@ -35,7 +35,7 @@ export const Input: React.FC<InputProps> = ({
       <TextInput
         style={[
           styles.input,
-          error && styles.inputError,
+          error ? styles.inputError : undefined,
           inputStyle,
         ]}
         placeholderTextColor="#9CA3AF"

@@ -405,7 +405,7 @@ const ChecklistDetailScreen = () => {
           title="삭제"
           onPress={handleDelete}
           variant="outline"
-          style={[styles.actionButton, styles.deleteButton]}
+          style={StyleSheet.flatten([styles.actionButton, styles.deleteButton])}
           textStyle={styles.deleteButtonText}
         />
       </View>

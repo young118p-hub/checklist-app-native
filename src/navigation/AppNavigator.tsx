@@ -78,7 +78,7 @@ const TabNavigator = () => {
 };
 
 const linking = {
-  prefixes: [Linking.createURL('/'), 'amajdaigeo://'],
+  prefixes: ['amajdaigeo://'],
   config: {
     screens: {
       Main: {
@@ -95,7 +95,7 @@ const linking = {
 
 export const AppNavigator = () => {
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking as any}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
