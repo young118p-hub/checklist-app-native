@@ -41,7 +41,7 @@
         "backgroundColor": "#DC2626"
       },
       "package": "com.checklist.amajdaigeo",
-      "versionCode": 11,
+      "versionCode": 12,
       "permissions": [
         "android.permission.VIBRATE"
       ]
