@@ -41,7 +41,7 @@
         "backgroundColor": "#DC2626"
       },
       "package": "com.checklist.amajdaigeo",
-      "versionCode": 12,
+      "versionCode": 13,
       "permissions": [
         "android.permission.VIBRATE"
       ]
@@ -60,8 +60,8 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34
           }
         }
       ]
