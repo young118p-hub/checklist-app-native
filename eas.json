@@ -16,9 +16,6 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
-      },
-      "env": {
-        "NODE_OPTIONS": "--no-experimental-strip-types"
       }
     }
   },
