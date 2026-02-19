@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { ChecklistItem, SituationTemplate } from '../../types';
+import { ChecklistItem } from '../../types';
 
 interface SmartRecommendationsProps {
   currentItems: ChecklistItem[];
@@ -28,12 +28,12 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
       icon: string;
     }> = [];
 
-    const currentTitles = currentItems.map(item => item.title.toLowerCase());
+    const currentTitles = currentItems.map(item => item.title.toLowerCase().trim());
 
-    // 날씨 기반 추천
+    // 날씨/계절 기반 추천
     const now = new Date();
     const month = now.getMonth() + 1;
-    
+
     if ((month >= 6 && month <= 8) && !currentTitles.some(title => title.includes('선크림'))) {
       recommendations.push({
         title: '선크림',
@@ -61,12 +61,12 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
       });
     }
 
-    // 카테고리별 스마트 추천
-    if (templateCategory === '여행') {
+    // 카테고리별 스마트 추천 (실제 템플릿 카테고리에 맞춤)
+    if (templateCategory === '여행' || templateCategory === '아웃도어') {
       if (!currentTitles.some(title => title.includes('보조배터리'))) {
         recommendations.push({
           title: '보조배터리',
-          description: '🔥꿀팁: 20000mAh 이상 추천',
+          description: '20000mAh 이상 추천',
           reason: '여행 중 배터리 방전 방지',
           icon: '🔋',
         });
@@ -81,15 +81,7 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
       }
     }
 
-    if (templateCategory === '데이트' || templateCategory === '여가') {
-      if (!currentTitles.some(title => title.includes('마스크'))) {
-        recommendations.push({
-          title: '마스크',
-          description: '개인 방역용',
-          reason: '밀폐공간 이용 시',
-          icon: '😷',
-        });
-      }
+    if (templateCategory === '여가') {
       if (!currentTitles.some(title => title.includes('물티슈'))) {
         recommendations.push({
           title: '물티슈',
@@ -98,20 +90,39 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
           icon: '🧻',
         });
       }
+      if (!currentTitles.some(title => title.includes('보조배터리'))) {
+        recommendations.push({
+          title: '보조배터리',
+          description: '외출 시 필수',
+          reason: '사진 많이 찍을 때',
+          icon: '🔋',
+        });
+      }
     }
 
     if (templateCategory === '운동') {
       if (!currentTitles.some(title => title.includes('여분'))) {
         recommendations.push({
           title: '여분 옷',
-          description: '🔥꿀팁: 운동 후 갈아입기',
+          description: '운동 후 갈아입기',
           reason: '땀 흘린 후 쾌적함',
           icon: '👕',
         });
       }
     }
 
-    // 일반적인 꿀팁 추천
+    if (templateCategory === '업무') {
+      if (!currentTitles.some(title => title.includes('보조배터리'))) {
+        recommendations.push({
+          title: '보조배터리',
+          description: '노트북/폰 충전용',
+          reason: '외부 미팅 시 필수',
+          icon: '🔋',
+        });
+      }
+    }
+
+    // 일반적인 추천
     if (!currentTitles.some(title => title.includes('손 소독제'))) {
       recommendations.push({
         title: '손 소독제',
@@ -133,12 +144,12 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>💡 이것도 필요할 수도...</Text>
+        <Text style={styles.title}>이것도 필요할 수도...</Text>
         <Text style={styles.subtitle}>AI가 추천하는 추가 준비물</Text>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       >

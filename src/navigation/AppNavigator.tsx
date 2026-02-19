@@ -3,7 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Linking } from 'react-native';
+import { LinkingOptions } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import screens
 import HomeScreen from '../screens/home/HomeScreen';
@@ -17,6 +18,8 @@ const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -35,8 +38,8 @@ const TabNavigator = () => {
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
           paddingTop: 8,
-          paddingBottom: 8,
-          height: 60,
+          paddingBottom: Math.max(insets.bottom, 8),
+          height: 60 + Math.max(insets.bottom - 8, 0),
         },
       }}
     >
@@ -77,7 +80,7 @@ const TabNavigator = () => {
   );
 };
 
-const linking = {
+const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['amajdaigeo://'],
   config: {
     screens: {
@@ -95,7 +98,7 @@ const linking = {
 
 export const AppNavigator = () => {
   return (
-    <NavigationContainer linking={linking as any}>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {

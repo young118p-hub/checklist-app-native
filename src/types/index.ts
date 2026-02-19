@@ -15,12 +15,17 @@ export interface ReminderSettings {
   createdAt: Date;
 }
 
+export interface NotificationActionData {
+  type: 'open_checklist' | 'view_my_checklists' | 'browse_templates' | 'view_analytics';
+  checklistId?: string;
+}
+
 export interface SmartNotification {
   id: string;
   type: 'reminder' | 'suggestion' | 'completion_celebration' | 'weekly_summary';
   title: string;
   message: string;
-  actionData?: any;
+  actionData?: NotificationActionData;
   isRead: boolean;
   createdAt: Date;
   scheduledFor?: Date;

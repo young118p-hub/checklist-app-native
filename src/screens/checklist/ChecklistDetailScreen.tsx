@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,10 @@ import {
   Alert,
   TextInput,
   TouchableOpacity,
-  Platform,
-  FlatList,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
-// import * as Haptics from "expo-haptics";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useChecklistStore } from '../../stores/checklistStore';
 import { ChecklistItemComponent } from '../../components/checklist/ChecklistItem';
@@ -32,19 +29,20 @@ type ChecklistDetailNavigationProp = StackNavigationProp<RootStackParamList>;
 const ChecklistDetailScreen = () => {
   const route = useRoute<ChecklistDetailRouteProp>();
   const navigation = useNavigation<ChecklistDetailNavigationProp>();
+  const insets = useSafeAreaInsets();
   const { id } = route.params;
-  
-  const { 
-    currentChecklist, 
-    loading, 
-    error, 
-    fetchChecklist, 
+
+  const {
+    currentChecklist,
+    loading,
+    error,
+    fetchChecklist,
     toggleItemComplete,
     deleteChecklist,
     updateChecklist,
     addItem,
     deleteItem,
-    trackChecklistCompletion 
+    trackChecklistCompletion
   } = useChecklistStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -58,24 +56,6 @@ const ChecklistDetailScreen = () => {
   useEffect(() => {
     fetchChecklist(id);
   }, [id]);
-
-  // 정렬된 아이템들 (useMemo로 최적화) - early return 전에 선언
-  const sortedItems = useMemo(() =>
-    currentChecklist?.items?.sort((a, b) => a.order - b.order) || [],
-    [currentChecklist?.items]
-  );
-
-  // FlatList 렌더링 최적화 - early return 전에 선언
-  const renderChecklistItem = useCallback(({ item }: { item: any }) => (
-    <ChecklistItemComponent
-      item={item}
-      onToggle={handleItemToggle}
-      onDelete={handleDeleteItem}
-      showDeleteButton={true}
-    />
-  ), []);
-
-  const keyExtractor = useCallback((item: any) => item.id, []);
 
   useEffect(() => {
     if (currentChecklist) {
@@ -103,63 +83,65 @@ const ChecklistDetailScreen = () => {
       await updateChecklist(currentChecklist.id, { title: newTitle });
       navigation.setOptions({ title: newTitle });
     } catch (error) {
-      Alert.alert('오료', '제목 변경에 실패했습니다.');
+      Alert.alert('오류', '제목 변경에 실패했습니다.');
     }
   };
 
   const handleItemToggle = async (itemId: string) => {
     if (!currentChecklist) return;
-    
-    const item = currentChecklist.items.find(item => item.id === itemId);
+
+    const item = currentChecklist.items.find(i => i.id === itemId);
     if (!item) return;
-    
-    // Haptic feedback based on completion state
-    if (item.isCompleted) {
-      // Item is being unchecked
-      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
-    } else {
-      // Item is being checked
-      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
-    }
-    
-    const oldCompletedCount = currentChecklist.items.filter(item => item.isCompleted).length;
-    await toggleItemComplete(itemId);
-    
-    // 축하 모달 트리거 체크
-    if (currentChecklist) {
-      const newCompletedCount = currentChecklist.items.filter(item => item.isCompleted).length;
-      const completionRate = Math.round((newCompletedCount / currentChecklist.items.length) * 100);
-      
-      // 완료율이 증가했고, 특정 threshold를 넘었을 때만 표시
-      if (newCompletedCount > oldCompletedCount && (
-        completionRate === 100 || 
-        (completionRate >= 80 && previousCompletionRate < 80) ||
-        (completionRate >= 50 && previousCompletionRate < 50)
-      )) {
-        // Celebration haptic feedback
-        // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
-        setTimeout(() => setShowCelebration(true), 300);
-        
-        // 100% 완료 시 analytics 기록
-        if (completionRate === 100) {
-          setTimeout(() => trackChecklistCompletion(currentChecklist), 500);
+
+    const totalItems = currentChecklist.items.length;
+    // Compute expected count based on current state + toggle direction
+    const oldCompletedCount = currentChecklist.items.filter(i => i.isCompleted).length;
+    const newCompletedCount = item.isCompleted
+      ? oldCompletedCount - 1  // unchecking
+      : oldCompletedCount + 1; // checking
+
+    toggleItemComplete(itemId);
+
+    const completionRate = Math.round((newCompletedCount / totalItems) * 100);
+
+    // 완료율이 증가했고, 특정 threshold를 처음 넘었을 때만 축하 모달 표시
+    if (newCompletedCount > oldCompletedCount && (
+      (completionRate === 100 && previousCompletionRate < 100) ||
+      (completionRate >= 80 && previousCompletionRate < 80) ||
+      (completionRate >= 50 && previousCompletionRate < 50)
+    )) {
+      setTimeout(() => setShowCelebration(true), 300);
+
+      // 100% 완료 시 analytics 기록
+      if (completionRate === 100) {
+        const updatedChecklist = useChecklistStore.getState().currentChecklist;
+        if (updatedChecklist) {
+          trackChecklistCompletion(updatedChecklist);
         }
       }
-      
+    }
+
+    // Only update previousCompletionRate when increasing to prevent re-triggering
+    if (completionRate > previousCompletionRate) {
       setPreviousCompletionRate(completionRate);
     }
   };
 
+  const getNextOrder = () => {
+    if (!currentChecklist || currentChecklist.items.length === 0) return 0;
+    return Math.max(...currentChecklist.items.map(i => i.order)) + 1;
+  };
+
   const handleAddRecommendation = async (title: string, description: string) => {
     if (!currentChecklist) return;
-    
+
     try {
       await addItem(currentChecklist.id, {
         title,
         description,
         quantity: 1,
         unit: '',
-        order: currentChecklist.items.length,
+        order: getNextOrder(),
         isCompleted: false,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -208,7 +190,7 @@ const ChecklistDetailScreen = () => {
         description: newItemDescription.trim(),
         quantity: 1,
         unit: '',
-        order: currentChecklist.items.length,
+        order: getNextOrder(),
         isCompleted: false,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -394,7 +376,7 @@ const ChecklistDetailScreen = () => {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View style={styles.actionButtons}>
+      <View style={[styles.actionButtons, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Button
           title="공유하기"
           onPress={handleShare}
@@ -429,19 +411,10 @@ const ChecklistDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: Platform.select({
-    web: {
-      flex: 1,
-      backgroundColor: '#F9FAFB',
-      height: '100vh' as any,
-      display: 'flex' as any,
-      flexDirection: 'column',
-    },
-    default: {
-      flex: 1,
-      backgroundColor: '#F9FAFB',
-    },
-  }),
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   progressCard: {
     margin: 16,
     marginBottom: 8,
@@ -489,23 +462,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontStyle: 'italic',
   },
-  scrollView: Platform.select({
-    web: {
-      flex: 1,
-      overflow: 'scroll' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      maxHeight: 'calc(100vh - 200px)' as any,
-    },
-    default: {
-      flex: 1,
-    },
-  }),
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
-    ...(Platform.OS === 'web' && {
-      paddingBottom: 40,
-    }),
   },
   loadingContainer: {
     flex: 1,

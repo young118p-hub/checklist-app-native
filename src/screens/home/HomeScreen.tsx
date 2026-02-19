@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   SafeAreaView,
   TextInput,
   Alert,
-  Platform,
   TouchableOpacity,
   FlatList,
   Modal,
@@ -15,7 +13,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-// import * as Haptics from "expo-haptics";
 
 import { SITUATION_TEMPLATES, POPULAR_TEMPLATES, calculateQuantity } from '../../constants/templates';
 import { useChecklistStore } from '../../stores/checklistStore';
@@ -24,19 +21,19 @@ import { PopularTemplateCard } from '../../components/checklist/PopularTemplateC
 import { NotificationCenter } from '../../components/ui/NotificationCenter';
 import { smartSearch } from '../../utils/smartSearch';
 import { parseSharedChecklist, validateSharedChecklistData } from '../../utils/shareUtils';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, SituationTemplate, SmartNotification } from '../../types';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const { 
-    createChecklist, 
-    loading, 
+  const {
+    createChecklist,
+    loading,
     notifications,
     getUnreadNotificationCount,
     markNotificationAsRead,
-    clearAllNotifications 
+    clearAllNotifications
   } = useChecklistStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
@@ -47,24 +44,23 @@ const HomeScreen = () => {
     message: string;
   }>({ isValid: false, message: '' });
 
-  const handleUseTemplate = useCallback(async (templateId: string) => {
-    const template = SITUATION_TEMPLATES.find(t => t.id === templateId);
-    if (!template) return;
+  // People count modal state
+  const [showPeopleModal, setShowPeopleModal] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<SituationTemplate | null>(null);
+  const [peopleCount, setPeopleCount] = useState(1);
 
-    // Haptic feedback for template selection
-    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
-
+  const createChecklistFromTemplate = useCallback(async (template: SituationTemplate, count: number) => {
     const checklistData = {
       title: template.name,
       description: template.description,
       isTemplate: false,
       isPublic: false,
-      peopleCount: 1,
-      categoryId: undefined,
+      peopleCount: count,
+      categoryId: template.category,
       items: template.items.map((item, index) => ({
         title: item.title,
         description: item.description || '',
-        quantity: calculateQuantity(item, template.peopleMultiplier ? 1 : 1),
+        quantity: template.peopleMultiplier ? calculateQuantity(item, count) : (item.baseQuantity || 1),
         unit: item.unit || '',
         order: index
       }))
@@ -72,11 +68,9 @@ const HomeScreen = () => {
 
     try {
       await createChecklist(checklistData);
-      // Success haptic feedback
-      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         '체크리스트 생성 완료!',
-        `${template.name} 체크리스트가 생성되었습니다.`,
+        `${template.name} 체크리스트가 생성되었습니다.${count > 1 ? ` (${count}명 기준)` : ''}`,
         [
           {
             text: '확인',
@@ -85,17 +79,39 @@ const HomeScreen = () => {
         ]
       );
     } catch (error) {
-      // Error haptic feedback
-      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Error);
       Alert.alert('오류', '체크리스트 생성에 실패했습니다.');
     }
   }, [createChecklist, navigation]);
 
-  const handleNotificationPress = (notification: any) => {
+  const handleUseTemplate = useCallback(async (templateId: string) => {
+    const template = SITUATION_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+
+    if (template.peopleMultiplier) {
+      // Show people count modal
+      setPendingTemplate(template);
+      setPeopleCount(1);
+      setShowPeopleModal(true);
+    } else {
+      // Create directly with 1 person
+      await createChecklistFromTemplate(template, 1);
+    }
+  }, [createChecklistFromTemplate]);
+
+  const handlePeopleModalConfirm = useCallback(async () => {
+    if (!pendingTemplate) return;
+    setShowPeopleModal(false);
+    await createChecklistFromTemplate(pendingTemplate, peopleCount);
+    setPendingTemplate(null);
+  }, [pendingTemplate, peopleCount, createChecklistFromTemplate]);
+
+  const handleNotificationPress = (notification: SmartNotification) => {
     if (notification.actionData) {
       switch (notification.actionData.type) {
         case 'open_checklist':
-          navigation.navigate('ChecklistDetail', { id: notification.actionData.checklistId });
+          if (notification.actionData.checklistId) {
+            navigation.navigate('ChecklistDetail', { id: notification.actionData.checklistId });
+          }
           break;
         case 'view_my_checklists':
           navigation.navigate('MyChecklists');
@@ -155,8 +171,6 @@ const HomeScreen = () => {
         return;
       }
 
-      // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
-
       // 공유받은 데이터를 체크리스트로 변환
       const checklistData = {
         title: `${sharedData.title} (공유받음)`,
@@ -176,13 +190,12 @@ const HomeScreen = () => {
 
       await createChecklist(checklistData);
 
-      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
       setShowImportModal(false);
       setImportText('');
       setImportValidation({ isValid: false, message: '' });
 
       Alert.alert(
-        '성공! 🎉',
+        '성공!',
         '공유받은 체크리스트가 내 체크리스트에 추가되었습니다.',
         [
           {
@@ -193,7 +206,6 @@ const HomeScreen = () => {
       );
     } catch (error) {
       console.error('Import checklist error:', error);
-      // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Error);
 
       let errorMessage = '공유받은 체크리스트 가져오기에 실패했습니다.';
 
@@ -212,29 +224,29 @@ const HomeScreen = () => {
   };
 
   // 스마트 검색 적용 (useMemo로 최적화)
-  const filteredTemplates = useMemo(() => 
-    searchTerm 
+  const filteredTemplates = useMemo(() =>
+    searchTerm
       ? smartSearch(SITUATION_TEMPLATES, searchTerm)
       : SITUATION_TEMPLATES,
     [searchTerm]
   );
 
-  const popularTemplates = useMemo(() => 
-    POPULAR_TEMPLATES.map(templateId => 
+  const popularTemplates = useMemo(() =>
+    POPULAR_TEMPLATES.map(templateId =>
       SITUATION_TEMPLATES.find(t => t.id === templateId)
-    ).filter(Boolean),
+    ).filter((t): t is SituationTemplate => t !== undefined),
     []
   );
 
-  const regularTemplates = useMemo(() => 
-    filteredTemplates.filter(template => 
+  const regularTemplates = useMemo(() =>
+    filteredTemplates.filter(template =>
       !POPULAR_TEMPLATES.includes(template.id)
     ),
     [filteredTemplates]
   );
 
   // FlatList 렌더링 최적화
-  const renderTemplateCard = useCallback(({ item }: { item: any }) => (
+  const renderTemplateCard = useCallback(({ item }: { item: SituationTemplate }) => (
     <TemplateCard
       template={item}
       onUseTemplate={handleUseTemplate}
@@ -242,7 +254,7 @@ const HomeScreen = () => {
     />
   ), [handleUseTemplate, loading]);
 
-  const renderPopularCard = useCallback(({ item }: { item: any }) => (
+  const renderPopularCard = useCallback(({ item }: { item: SituationTemplate }) => (
     <PopularTemplateCard
       template={item}
       onUseTemplate={handleUseTemplate}
@@ -250,7 +262,7 @@ const HomeScreen = () => {
     />
   ), [handleUseTemplate, loading]);
 
-  const keyExtractor = useCallback((item: any) => item.id, []);
+  const keyExtractor = useCallback((item: SituationTemplate) => item.id, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -258,15 +270,12 @@ const HomeScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerContent}>
-            <Text style={styles.title}>아맞다이거! 🤦‍♂️</Text>
+            <Text style={styles.title}>아맞다이거!</Text>
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity
               style={styles.importButton}
-              onPress={() => {
-                // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
-                setShowImportModal(true);
-              }}
+              onPress={() => setShowImportModal(true)}
             >
               <Ionicons
                 name="download"
@@ -276,23 +285,23 @@ const HomeScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.notificationButton}
-              onPress={() => {
-                // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
-                setShowNotificationCenter(true);
-              }}
+              onPress={() => setShowNotificationCenter(true)}
             >
               <Ionicons
                 name="notifications"
                 size={24}
                 color="white"
               />
-              {getUnreadNotificationCount() > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>
-                    {getUnreadNotificationCount()}
-                  </Text>
-                </View>
-              )}
+              {(() => {
+                const unreadCount = getUnreadNotificationCount();
+                return unreadCount > 0 ? (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadCount}
+                    </Text>
+                  </View>
+                ) : null;
+              })()}
             </TouchableOpacity>
           </View>
         </View>
@@ -328,7 +337,7 @@ const HomeScreen = () => {
             </Text>
             {filteredTemplates.length > 0 && (
               <Text style={styles.searchHint}>
-                💡 동의어, 초성 검색 지원 (예: "ㅊㅈ" → 출장)
+                동의어, 초성 검색 지원 (예: "ㅊㅈ" → 출장)
               </Text>
             )}
           </View>
@@ -338,7 +347,7 @@ const HomeScreen = () => {
       {/* Popular Templates Section */}
       {!searchTerm && (
         <View style={styles.popularSection}>
-          <Text style={styles.sectionTitle}>🔥 인기 템플릿</Text>
+          <Text style={styles.sectionTitle}>인기 템플릿</Text>
           <FlatList
             data={popularTemplates}
             renderItem={renderPopularCard}
@@ -357,9 +366,9 @@ const HomeScreen = () => {
       {/* All Templates List */}
       <View style={styles.scrollView}>
         {!searchTerm && (
-          <Text style={styles.sectionTitle}>📂 모든 템플릿</Text>
+          <Text style={styles.sectionTitle}>모든 템플릿</Text>
         )}
-        
+
         {filteredTemplates.length === 0 && searchTerm ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
@@ -382,11 +391,6 @@ const HomeScreen = () => {
             maxToRenderPerBatch={3}
             windowSize={10}
             updateCellsBatchingPeriod={100}
-            getItemLayout={(data, index) => ({
-              length: 180, // 예상되는 아이템 높이
-              offset: 180 * index,
-              index,
-            })}
           />
         )}
       </View>
@@ -399,6 +403,78 @@ const HomeScreen = () => {
         onMarkAsRead={markNotificationAsRead}
         onClearAll={clearAllNotifications}
       />
+
+      {/* People Count Modal */}
+      <Modal
+        visible={showPeopleModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowPeopleModal(false)}
+      >
+        <View style={styles.peopleModalOverlay}>
+          <View style={styles.peopleModalContainer}>
+            <Text style={styles.peopleModalTitle}>인원 수 설정</Text>
+            <Text style={styles.peopleModalDescription}>
+              {pendingTemplate?.name}에 참여하는 인원 수를 선택해주세요.{'\n'}
+              인원에 맞게 수량이 자동 계산됩니다.
+            </Text>
+
+            <View style={styles.peopleCounterContainer}>
+              <TouchableOpacity
+                style={[styles.peopleCounterButton, peopleCount <= 1 && styles.peopleCounterButtonDisabled]}
+                onPress={() => peopleCount > 1 && setPeopleCount(prev => prev - 1)}
+                disabled={peopleCount <= 1}
+              >
+                <Text style={[styles.peopleCounterButtonText, peopleCount <= 1 && styles.peopleCounterButtonTextDisabled]}>-</Text>
+              </TouchableOpacity>
+              <View style={styles.peopleCountDisplay}>
+                <Text style={styles.peopleCountNumber}>{peopleCount}</Text>
+                <Text style={styles.peopleCountUnit}>명</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.peopleCounterButton, peopleCount >= 100 && styles.peopleCounterButtonDisabled]}
+                onPress={() => peopleCount < 100 && setPeopleCount(prev => prev + 1)}
+                disabled={peopleCount >= 100}
+              >
+                <Text style={[styles.peopleCounterButtonText, peopleCount >= 100 && styles.peopleCounterButtonTextDisabled]}>+</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick select buttons */}
+            <View style={styles.quickSelectContainer}>
+              {[1, 2, 3, 4, 5, 10].map(num => (
+                <TouchableOpacity
+                  key={num}
+                  style={[styles.quickSelectButton, peopleCount === num && styles.quickSelectButtonActive]}
+                  onPress={() => setPeopleCount(num)}
+                >
+                  <Text style={[styles.quickSelectText, peopleCount === num && styles.quickSelectTextActive]}>
+                    {num}명
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.peopleModalButtons}>
+              <TouchableOpacity
+                style={styles.peopleModalCancel}
+                onPress={() => {
+                  setShowPeopleModal(false);
+                  setPendingTemplate(null);
+                }}
+              >
+                <Text style={styles.peopleModalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.peopleModalConfirm}
+                onPress={handlePeopleModalConfirm}
+              >
+                <Text style={styles.peopleModalConfirmText}>생성하기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Import Shared Checklist Modal */}
       <Modal
@@ -428,17 +504,17 @@ const HomeScreen = () => {
             </Text>
 
             <View style={styles.instructionCard}>
-              <Text style={styles.instructionTitle}>💡 사용 방법</Text>
+              <Text style={styles.instructionTitle}>사용 방법</Text>
               <Text style={styles.instructionText}>
-                1. 공유받은 링크 (amajdaigeo://...)를 붙여넣기{'\n'}
-                2. 또는 JSON 형태의 체크리스트 데이터 붙여넣기{'\n'}
+                1. 친구가 공유한 메시지 전체를 복사{'\n'}
+                2. 아래 입력란에 그대로 붙여넣기{'\n'}
                 3. 자동으로 검증 후 가져오기 버튼이 활성화됩니다
               </Text>
             </View>
 
             <TextInput
               style={styles.importTextArea}
-              placeholder="amajdaigeo://import-checklist?data=... 또는 JSON 데이터를 붙여넣기"
+              placeholder="공유받은 메시지를 여기에 붙여넣기"
               value={importText}
               onChangeText={handleImportTextChange}
               multiline
@@ -656,6 +732,134 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: 20,
   },
+  // People Count Modal
+  peopleModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  peopleModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+  },
+  peopleModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  peopleModalDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  peopleCounterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  peopleCounterButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  peopleCounterButtonDisabled: {
+    opacity: 0.4,
+  },
+  peopleCounterButtonText: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  peopleCounterButtonTextDisabled: {
+    color: '#9CA3AF',
+  },
+  peopleCountDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginHorizontal: 24,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  peopleCountNumber: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
+  peopleCountUnit: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  quickSelectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  quickSelectButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickSelectButtonActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#DC2626',
+  },
+  quickSelectText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  quickSelectTextActive: {
+    color: '#DC2626',
+  },
+  peopleModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  peopleModalCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  peopleModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  peopleModalConfirm: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+  },
+  peopleModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+  },
+  // Import Modal
   modalContainer: {
     flex: 1,
     backgroundColor: '#F9FAFB',

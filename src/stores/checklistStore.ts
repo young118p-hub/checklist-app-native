@@ -186,7 +186,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
     });
 
     // Save to storage after update
-    setTimeout(() => get().saveToStorage(), 100);
+    get().saveToStorage().catch(e => console.error('Failed to save after toggleItemComplete:', e));
   },
 
   addItem: async (checklistId: string, item: Omit<ChecklistItem, 'id' | 'checklistId'>) => {
@@ -326,16 +326,16 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
 
   markNotificationAsRead: (notificationId: string) => {
     set((state) => ({
-      notifications: state.notifications.map(n => 
+      notifications: state.notifications.map(n =>
         n.id === notificationId ? { ...n, isRead: true } : n
       )
     }));
-    get().saveToStorage();
+    get().saveToStorage().catch(e => console.error('Failed to save after markNotificationAsRead:', e));
   },
 
   clearAllNotifications: () => {
     set({ notifications: [] });
-    get().saveToStorage();
+    get().saveToStorage().catch(e => console.error('Failed to save after clearAllNotifications:', e));
   },
 
   generateSmartNotifications: async (checklist: Checklist) => {
@@ -380,14 +380,16 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
       const stored = await AsyncStorage.getItem('checklist-storage');
       if (stored) {
         const data = JSON.parse(stored);
-        set({ 
-          checklists: data.checklists || [], 
-          analytics: data.analytics || [],
-          notifications: data.notifications || []
-        });
+        // Validate basic structure before applying
+        const checklists = Array.isArray(data.checklists) ? data.checklists : [];
+        const analytics = Array.isArray(data.analytics) ? data.analytics : [];
+        const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        set({ checklists, analytics, notifications });
       }
     } catch (error) {
       console.error('Failed to load from storage:', error);
+      // Reset to safe defaults on corruption
+      set({ checklists: [], analytics: [], notifications: [] });
     }
   },
 

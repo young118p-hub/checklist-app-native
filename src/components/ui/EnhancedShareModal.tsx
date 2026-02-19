@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Share,
-  Dimensions,
 } from 'react-native';
-// import * as Clipboard from "expo-clipboard";
-// import * as Haptics from "expo-haptics";
+import * as Clipboard from 'expo-clipboard';
 import { Checklist } from '../../types';
-import { shareChecklist } from '../../utils/shareUtils';
+import {
+  shareChecklist,
+  generateAppShareText,
+  generateTextShareText,
+} from '../../utils/shareUtils';
 
 interface EnhancedShareModalProps {
   visible: boolean;
@@ -23,34 +24,16 @@ interface EnhancedShareModalProps {
 
 const shareFormats = [
   {
-    id: 'advanced',
-    title: '체크리스트 공유',
-    description: '친구가 바로 가져올 수 있는 링크',
-    emoji: '🔗',
+    id: 'app' as const,
+    title: '앱으로 보내기',
+    description: '받는 사람이 앱에서 바로 가져올 수 있어요',
+    emoji: '📲',
   },
   {
-    id: 'detailed',
-    title: '상세 정보 포함',
-    description: '진행률과 설명까지 모든 정보',
-    emoji: '📊',
-  },
-  {
-    id: 'simple',
-    title: '간단한 목록',
-    description: '체크박스와 함께 깔끔한 텍스트',
+    id: 'text' as const,
+    title: '텍스트만 보내기',
+    description: '깔끔한 체크리스트 목록을 공유해요',
     emoji: '📝',
-  },
-  {
-    id: 'markdown',
-    title: '마크다운 형식',
-    description: '깃헙이나 노션에서 사용 가능',
-    emoji: '💻',
-  },
-  {
-    id: 'korean_style',
-    title: '한국어 스타일',
-    description: '이모티콘과 한국어 표현',
-    emoji: '🇰🇷',
   },
 ];
 
@@ -59,63 +42,18 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
   onClose,
   checklist,
 }) => {
-  const [selectedFormat, setSelectedFormat] = useState('advanced');
+  const [selectedFormat, setSelectedFormat] = useState<'app' | 'text'>('app');
 
-  const generateShareText = (format: string): string => {
-    const completedItems = checklist.items.filter(item => item.isCompleted);
-    const totalItems = checklist.items.length;
-    const progress = Math.round((completedItems.length / totalItems) * 100);
-
-    switch (format) {
-      case 'advanced':
-        return `📝 ${checklist.title}\n\n✅ 진행률: ${completedItems.length}/${totalItems} (${progress}%)\n\n${checklist.description ? `📄 ${checklist.description}\n\n` : ''}📋 체크리스트:\n${checklist.items.map((item, index) =>
-          `${index + 1}. ${item.isCompleted ? '✅' : '☐'} ${item.title}${
-            item.quantity && item.quantity > 1 ? ` (${item.quantity}${item.unit || ''})` : ''
-          }${item.description ? `\n   💬 ${item.description}` : ''}`
-        ).join('\n')}\n\n🚀 아맞다이거! 앱에서 생성됨\n\n📱 이 체크리스트를 바로 가져오려면:\n1. 아맞다이거! 앱을 다운로드하세요\n2. 홈 화면 오른쪽 위 다운로드 버튼을 누르세요\n3. 이 메시지를 복사해서 붙여넣기 하세요`;
-
-      case 'simple':
-        return `${checklist.title}\n\n${checklist.items.map((item, index) => 
-          `${item.isCompleted ? '✅' : '☐'} ${item.title}`
-        ).join('\n')}\n\n아맞다이거! 앱에서 생성됨`;
-
-      case 'markdown':
-        return `# ${checklist.title}\n\n${checklist.description ? `> ${checklist.description}\n\n` : ''}**진행률:** ${completedItems.length}/${totalItems} (${progress}%)\n\n## 체크리스트\n\n${checklist.items.map((item, index) => 
-          `- [${item.isCompleted ? 'x' : ' '}] ${item.title}${item.description ? ` - ${item.description}` : ''}`
-        ).join('\n')}\n\n---\n*아맞다이거! 앱에서 생성됨*`;
-
-      case 'korean_style':
-        return `🎯 ${checklist.title}\n\n${progress === 100 ? '🎉 완료!' : progress >= 80 ? '👍 거의 다!' : progress >= 50 ? '💪 절반 완료!' : '🚀 시작!'} 진행률: ${progress}%\n\n${checklist.items.map((item, index) => {
-          const emoji = item.isCompleted ? '✅' : '🔲';
-          const orderEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][index] || `${index + 1}️⃣`;
-          return `${orderEmoji} ${emoji} ${item.title}${item.quantity && item.quantity > 1 ? ` (${item.quantity}${item.unit || '개'})` : ''}`;
-        }).join('\n')}\n\n💡 아맞다이거! 앱으로 더 많은 템플릿을 확인해보세요!`;
-
-      case 'detailed':
-      default:
-        return `📝 ${checklist.title}\n\n✅ 진행률: ${completedItems.length}/${totalItems} (${progress}%)\n\n${checklist.description ? `📄 ${checklist.description}\n\n` : ''}📋 체크리스트:\n${checklist.items.map((item, index) => 
-          `${index + 1}. ${item.isCompleted ? '✅' : '☐'} ${item.title}${
-            item.quantity && item.quantity > 1 ? ` (${item.quantity}${item.unit || ''})` : ''
-          }${item.description ? `\n   💬 ${item.description}` : ''}`
-        ).join('\n')}\n\n🚀 아맞다이거! 앱에서 생성됨`;
-    }
+  const getShareText = (format: 'app' | 'text'): string => {
+    return format === 'app'
+      ? generateAppShareText(checklist)
+      : generateTextShareText(checklist);
   };
 
-  const handleShare = async (format: string) => {
-    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Medium);
-
+  const handleShare = async () => {
     try {
-      if (format === 'advanced') {
-        const success = await shareChecklist(checklist);
-        if (success) {
-          onClose();
-        }
-      } else {
-        const shareText = generateShareText(format);
-        await Share.share({
-          message: shareText,
-          title: checklist.title,
-        });
+      const success = await shareChecklist(checklist, selectedFormat);
+      if (success) {
         onClose();
       }
     } catch (error) {
@@ -123,21 +61,14 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
     }
   };
 
-  const handleCopyToClipboard = async (format: string) => {
-    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
-
+  const handleCopyToClipboard = async () => {
     try {
-      const shareText = generateShareText(format);
-      await // Clipboard.setStringAsync(shareText);
-      Alert.alert('복사 완료! 📋', '클립보드에 복사되었습니다.');
+      const shareText = getShareText(selectedFormat);
+      await Clipboard.setStringAsync(shareText);
+      Alert.alert('복사 완료! 📋', '클립보드에 복사되었습니다.\n메신저에 붙여넣기 해주세요.');
     } catch (error) {
       Alert.alert('오류', '클립보드 복사에 실패했습니다.');
     }
-  };
-
-  const handleFormatSelect = (formatId: string) => {
-    // Haptics.selectionAsync();
-    setSelectedFormat(formatId);
   };
 
   const selectedFormatData = shareFormats.find(f => f.id === selectedFormat);
@@ -159,7 +90,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>공유 형식 선택</Text>
-          
+
           {shareFormats.map((format) => (
             <TouchableOpacity
               key={format.id}
@@ -167,7 +98,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
                 styles.formatCard,
                 selectedFormat === format.id && styles.formatCardSelected,
               ]}
-              onPress={() => handleFormatSelect(format.id)}
+              onPress={() => setSelectedFormat(format.id)}
             >
               <View style={styles.formatInfo}>
                 <Text style={styles.formatEmoji}>{format.emoji}</Text>
@@ -191,7 +122,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
           <View style={styles.previewContainer}>
             <ScrollView style={styles.previewScroll}>
               <Text style={styles.previewText}>
-                {generateShareText(selectedFormat)}
+                {getShareText(selectedFormat)}
               </Text>
             </ScrollView>
           </View>
@@ -200,7 +131,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.copyButton}
-            onPress={() => handleCopyToClipboard(selectedFormat)}
+            onPress={handleCopyToClipboard}
           >
             <Text style={styles.copyButtonText}>
               📋 복사하기
@@ -208,7 +139,7 @@ export const EnhancedShareModal: React.FC<EnhancedShareModalProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shareButton}
-            onPress={() => handleShare(selectedFormat)}
+            onPress={handleShare}
           >
             <Text style={styles.shareButtonText}>
               {selectedFormatData?.emoji} 공유하기

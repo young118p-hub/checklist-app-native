@@ -70,8 +70,15 @@ export const TemplateCard: React.FC<TemplateCardProps> = React.memo(({
       </View>
       
       <View style={styles.footer}>
-        <View style={styles.category}>
-          <Text style={styles.categoryText}>{template.category}</Text>
+        <View style={styles.footerBadges}>
+          <View style={styles.category}>
+            <Text style={styles.categoryText}>{template.category}</Text>
+          </View>
+          {template.peopleMultiplier && (
+            <View style={styles.peopleBadge}>
+              <Text style={styles.peopleBadgeText}>👥 인원별</Text>
+            </View>
+          )}
         </View>
         <Button
           title={loading ? '생성 중...' : '바로 사용하기'}
@@ -145,6 +152,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  footerBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   category: {
     backgroundColor: '#FEF2F2',
     paddingHorizontal: 8,
@@ -154,6 +166,17 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     color: '#DC2626',
+    fontWeight: '500',
+  },
+  peopleBadge: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  peopleBadgeText: {
+    fontSize: 12,
+    color: '#4F46E5',
     fontWeight: '500',
   },
   useButton: {

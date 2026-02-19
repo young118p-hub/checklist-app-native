@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Alert, View, Text, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useChecklistStore } from './src/stores/checklistStore';
 import { ErrorBoundary } from './src/components/ui/ErrorBoundary';
@@ -91,10 +92,12 @@ export default function App() {
       }
     };
 
-    initializeApp();
-    getInitialUrl();
+    // Await initialization before processing deep links to prevent data loss
+    initializeApp().then(() => {
+      getInitialUrl();
+    });
 
-    // Add event listener for deep links
+    // Add event listener for deep links (while app is already running)
     const subscription = Linking.addEventListener('url', handleUrl);
 
     return () => subscription?.remove();
@@ -121,11 +124,13 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <StatusBar style="light" backgroundColor="#DC2626" />
-      <AppNavigator />
-      <OfflineNotice />
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <StatusBar style="light" backgroundColor="#DC2626" />
+        <AppNavigator />
+        <OfflineNotice />
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 

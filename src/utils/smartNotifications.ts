@@ -146,7 +146,7 @@ export class SmartNotificationSystem {
   }
 
   // 놓친 항목 알림
-  static createMissedItemsNotification(analytics: any[]): SmartNotification | null {
+  static createMissedItemsNotification(analytics: { title: string; missRate: number; totalSeen: number }[]): SmartNotification | null {
     const frequentlyMissed = analytics
       .filter(item => item.missRate > 50 && item.totalSeen >= 3)
       .slice(0, 3);

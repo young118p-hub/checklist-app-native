@@ -3,24 +3,20 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   SafeAreaView,
   Alert,
   RefreshControl,
-  Platform,
   FlatList,
   TextInput,
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-// import * as Haptics from "expo-haptics";
-
 import { useChecklistStore } from '../../stores/checklistStore';
 import { ChecklistCard } from '../../components/checklist/ChecklistCard';
 import { Button } from '../../components/ui/Button';
 import { AnalyticsCard } from '../../components/ui/AnalyticsCard';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, Checklist } from '../../types';
 
 type MyChecklistsNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -52,20 +48,18 @@ const MyChecklistsScreen = () => {
   };
 
   const handleChecklistPress = useCallback((checklistId: string) => {
-    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('ChecklistDetail', { id: checklistId });
   }, [navigation]);
 
-  const handleEditTitle = async (checklistId: string, newTitle: string) => {
+  const handleEditTitle = useCallback(async (checklistId: string, newTitle: string) => {
     try {
       await updateChecklist(checklistId, { title: newTitle });
     } catch (error) {
       Alert.alert('오류', '제목 변경에 실패했습니다.');
     }
-  };
+  }, [updateChecklist]);
 
   const handleDeleteChecklist = useCallback((checklistId: string, title: string) => {
-    // Haptics.impactAsync(// Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       '체크리스트 삭제',
       `"${title}" 체크리스트를 정말 삭제하시겠습니까?`,
@@ -78,7 +72,6 @@ const MyChecklistsScreen = () => {
           text: '삭제',
           style: 'destructive',
           onPress: () => {
-            // Haptics.notificationAsync(// Haptics.NotificationFeedbackType.Success);
             deleteChecklist(checklistId);
           },
         },
@@ -87,7 +80,7 @@ const MyChecklistsScreen = () => {
   }, [deleteChecklist]);
 
   // FlatList 렌더링 최적화
-  const renderChecklistCard = useCallback(({ item }: { item: any }) => (
+  const renderChecklistCard = useCallback(({ item }: { item: Checklist }) => (
     <ChecklistCard
       checklist={item}
       onPress={() => handleChecklistPress(item.id)}
@@ -96,7 +89,7 @@ const MyChecklistsScreen = () => {
     />
   ), [handleChecklistPress, handleEditTitle]);
 
-  const keyExtractor = useCallback((item: any) => item.id, []);
+  const keyExtractor = useCallback((item: Checklist) => item.id, []);
 
   // 검색 및 필터링된 체크리스트
   const filteredChecklists = useMemo(() => {
@@ -153,12 +146,12 @@ const MyChecklistsScreen = () => {
           <View style={styles.emptyButtons}>
             <Button
               title="템플릿 보기"
-              onPress={() => navigation.navigate('Home' as any)}
+              onPress={() => navigation.navigate('Home')}
               style={styles.emptyButton}
             />
             <Button
               title="직접 만들기"
-              onPress={() => navigation.navigate('Create' as any)}
+              onPress={() => navigation.navigate('Create')}
               variant="outline"
               style={styles.emptyButton}
             />
@@ -254,11 +247,6 @@ const MyChecklistsScreen = () => {
             maxToRenderPerBatch={3}
             windowSize={10}
             updateCellsBatchingPeriod={100}
-            getItemLayout={(data, index) => ({
-              length: 120, // 예상되는 아이템 높이
-              offset: 120 * index,
-              index,
-            })}
           />
         </>
       )}
@@ -287,23 +275,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  scrollView: Platform.select({
-    web: {
-      flex: 1,
-      overflow: 'scroll' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      maxHeight: 'calc(100vh - 150px)' as any,
-    },
-    default: {
-      flex: 1,
-    },
-  }),
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
-    ...(Platform.OS === 'web' && {
-      paddingBottom: 40,
-    }),
   },
   emptyContainer: {
     flex: 1,
