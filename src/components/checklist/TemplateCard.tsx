@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { SituationTemplate } from '../../types';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_GAP = 12;
+const CARD_HORIZONTAL_PADDING = 16;
+const CARD_WIDTH = (SCREEN_WIDTH - CARD_HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
 interface TemplateCardProps {
   template: SituationTemplate;
@@ -46,141 +49,114 @@ export const TemplateCard: React.FC<TemplateCardProps> = React.memo(({
   };
 
   return (
-    <Card style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => onUseTemplate(template.id)}
+      activeOpacity={0.7}
+      disabled={loading}
+    >
       <View style={styles.header}>
         <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(template.category) }]}>
           <Text style={styles.icon}>{getIcon(template.category)}</Text>
-        </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{template.name}</Text>
-          <Text style={styles.description} numberOfLines={2}>
-            {template.description}
-          </Text>
         </View>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{template.items.length}</Text>
         </View>
       </View>
-      
-      <View style={styles.itemsPreview}>
-        <Text style={styles.itemsText}>
-          {template.items.slice(0, 3).map(item => item.title).join(', ')}
-          {template.items.length > 3 && ` 외 ${template.items.length - 3}개`}
-        </Text>
-      </View>
-      
+
+      <Text style={styles.title} numberOfLines={1}>{template.name}</Text>
+      <Text style={styles.description} numberOfLines={1}>
+        {template.description}
+      </Text>
+
       <View style={styles.footer}>
-        <View style={styles.footerBadges}>
-          <View style={styles.category}>
-            <Text style={styles.categoryText}>{template.category}</Text>
-          </View>
-          {template.peopleMultiplier && (
-            <View style={styles.peopleBadge}>
-              <Text style={styles.peopleBadgeText}>👥 인원별</Text>
-            </View>
-          )}
+        <View style={styles.category}>
+          <Text style={styles.categoryText}>{template.category}</Text>
         </View>
-        <Button
-          title={loading ? '생성 중...' : '바로 사용하기'}
-          onPress={() => onUseTemplate(template.id)}
-          size="small"
-          loading={loading}
-          style={styles.useButton}
-        />
+        {template.peopleMultiplier && (
+          <View style={styles.peopleBadge}>
+            <Text style={styles.peopleBadgeText}>👥</Text>
+          </View>
+        )}
       </View>
-    </Card>
+    </TouchableOpacity>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 8,
+    width: CARD_WIDTH,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   icon: {
-    fontSize: 20,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontSize: 18,
   },
   countBadge: {
     backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   countText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',
   },
-  itemsPreview: {
-    marginBottom: 16,
+  title: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 3,
   },
-  itemsText: {
+  description: {
     fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 18,
+    color: '#9CA3AF',
+    lineHeight: 16,
+    marginBottom: 10,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerBadges: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   category: {
     backgroundColor: '#FEF2F2',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#DC2626',
     fontWeight: '500',
   },
   peopleBadge: {
     backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   peopleBadgeText: {
-    fontSize: 12,
-    color: '#4F46E5',
-    fontWeight: '500',
-  },
-  useButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    fontSize: 11,
   },
 });

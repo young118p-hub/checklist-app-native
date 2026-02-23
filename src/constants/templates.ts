@@ -11,7 +11,7 @@ export const POPULAR_TEMPLATES = [
   'cherry_blossom_date',
   'korean_bbq',
   'movie_date',
-  'wedding_guest',
+  'korean_wedding',
   'job_interview',
   'remote_work',
   'waterpark',
@@ -221,15 +221,15 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
     category: '여가',
     peopleMultiplier: false,
     items: [
-      { title: '지갑', description: '현금, 카드 충분히', baseQuantity: 1, unit: '개' },
+      { title: '데이트 의상', description: '날씨와 장소에 맞는 깔끔한 옷', baseQuantity: 1, unit: '벌' },
+      { title: '향수/데오드란트', description: '은은한 향', baseQuantity: 1, unit: '개' },
+      { title: '립밤', description: '입술 관리용', baseQuantity: 1, unit: '개' },
+      { title: '사탕/민트', description: '식사 후 입냄새 관리', baseQuantity: 1, unit: '세트' },
+      { title: '지갑', description: '현금, 카드 (예상보다 20% 더 준비)', baseQuantity: 1, unit: '개' },
       { title: '핸드폰 충전', description: '배터리 100% + 보조배터리', baseQuantity: 1, unit: '개' },
-      { title: '데이트 의상', description: '날씨와 장소에 맞는 옷', baseQuantity: 1, unit: '벌' },
-      { title: '향수/데오드란트', description: '은은한 향수', baseQuantity: 1, unit: '개' },
       { title: '미니 가방', description: '필수품만 넣을 작은 가방', baseQuantity: 1, unit: '개' },
-      { title: '립밤/립틱', description: '입술 관리용', baseQuantity: 1, unit: '개' },
       { title: '티슈/핸드크림', description: '개인위생용품', baseQuantity: 1, unit: '세트' },
-      { title: '교통카드', description: '대중교통 이용시', baseQuantity: 1, unit: '개' },
-      { title: '마스크', description: '개인 방역용', baseQuantity: 2, unit: '개' },
+      { title: '장소 확인', description: '만남 장소 위치 미리 확인', baseQuantity: 1, unit: '건' },
       { title: '우산', description: '날씨 대비용', baseQuantity: 1, unit: '개' },
     ]
   },
@@ -273,25 +273,6 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
     ]
   },
   {
-    id: 'home_alone',
-    name: '혼자 집 보기',
-    description: '🏠 부모님 외출시 집지키기',
-    category: '일상',
-    peopleMultiplier: false,
-    items: [
-      { title: '현관문 잠금 확인', description: '도어락 잠금 확인', baseQuantity: 1, unit: '회' },
-      { title: '비상연락처', description: '부모님, 경찰서, 소방서', baseQuantity: 1, unit: '리스트' },
-      { title: '핸드폰 충전', description: '연락용 핸드폰 충전', baseQuantity: 1, unit: '개' },
-      { title: '간단한 식사', description: '라면, 즉석식품', baseQuantity: 2, unit: '개' },
-      { title: '음료/물', description: '충분한 수분', baseQuantity: 1, unit: 'L' },
-      { title: '간식', description: '과자, 과일', baseQuantity: 3, unit: '개' },
-      { title: '휴지/생필품', description: '화장지, 세면용품', baseQuantity: 1, unit: '세트' },
-      { title: '오락거리', description: '책, 게임, 영화', baseQuantity: 3, unit: '개' },
-      { title: '의약품', description: '상비약, 반창고', baseQuantity: 1, unit: '세트' },
-      { title: '손전등', description: '정전 대비', baseQuantity: 1, unit: '개' },
-    ]
-  },
-  {
     id: 'car_wash',
     name: '세차',
     description: '🚗 완벽한 셀프 세차 준비물',
@@ -331,7 +312,7 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
   },
   {
     id: 'beach_trip',
-    name: '해수욕장',
+    name: '해수욕장/바다',
     description: '🏖️ 여름 바다 여행 준비물',
     category: '여행',
     peopleMultiplier: true,
@@ -339,14 +320,16 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '수영복', description: '바다 수영용', baseQuantity: 1, unit: '벌', multiplier: 1 },
       { title: '비치타월', description: '큰 해변 타월', baseQuantity: 1, unit: '개', multiplier: 1 },
       { title: '선크림', description: 'SPF50+ 방수', baseQuantity: 2, unit: '개' },
+      { title: '선글라스', description: '바다 햇빛 차단', baseQuantity: 1, unit: '개', multiplier: 1 },
+      { title: '모자', description: '넓은 챙 모자', baseQuantity: 1, unit: '개', multiplier: 1 },
       { title: '비치 파라솔', description: '그늘막', baseQuantity: 1, unit: '개' },
       { title: '비치볼/튜브', description: '바다 놀이용품', baseQuantity: 3, unit: '개' },
-      { title: '수경/스노클', description: '물놀이용', baseQuantity: 1, unit: '개', multiplier: 1 },
       { title: '비치샌들', description: '물에 젖어도 되는 신발', baseQuantity: 1, unit: '켤레', multiplier: 1 },
       { title: '방수가방', description: '소지품 보관용', baseQuantity: 1, unit: '개', multiplier: 1 },
+      { title: '여분 옷', description: '바닷바람/젖었을 때 대비', baseQuantity: 1, unit: '벌', multiplier: 1 },
       { title: '시원한 음료', description: '갈증 해소용', baseQuantity: 3, unit: '개', multiplier: 1 },
       { title: '간식', description: '바다에서 먹을 간식', baseQuantity: 5, unit: '개' },
-      { title: '응급처치용품', description: '해파리 쏘임 대비', baseQuantity: 1, unit: '세트' },
+      { title: '카메라', description: '인증샷 촬영', baseQuantity: 1, unit: '개' },
     ]
   },
   {
@@ -367,25 +350,6 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '응급처치용품', description: '부상 대비 구급약', baseQuantity: 1, unit: '세트' },
       { title: '등산지도/GPS', description: '길찾기용', baseQuantity: 1, unit: '개' },
       { title: '호루라기', description: '조난 대비', baseQuantity: 1, unit: '개', multiplier: 1 },
-    ]
-  },
-  {
-    id: 'karaoke',
-    name: '노래방',
-    description: '🎤 친구들과 노래방 준비물',
-    category: '여가',
-    peopleMultiplier: true,
-    items: [
-      { title: '현금', description: '노래방 비용 + 연장비', baseQuantity: 50000, unit: '원' },
-      { title: '음료/안주', description: '콜라, 맥주, 과자', baseQuantity: 5, unit: '개' },
-      { title: '핸드폰', description: '노래 검색, 촬영용', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '보조배터리', description: '핸드폰 충전용', baseQuantity: 1, unit: '개' },
-      { title: '목캔디/목스프레이', description: '목 관리용', baseQuantity: 1, unit: '개' },
-      { title: '물', description: '수분 보충용', baseQuantity: 2, unit: '개', multiplier: 1 },
-      { title: '마스크', description: '개인 방역용', baseQuantity: 2, unit: '개', multiplier: 1 },
-      { title: '손 소독제', description: '위생용', baseQuantity: 1, unit: '개' },
-      { title: '교통카드/택시비', description: '귀가용', baseQuantity: 1, unit: '세트' },
-      { title: '즐거운 마음', description: '흥 가득한 마음가짐', baseQuantity: 1, unit: '개' },
     ]
   },
   {
@@ -541,25 +505,6 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
     ]
   },
   {
-    id: 'couple_cafe',
-    name: '카페 데이트',
-    description: '☕ 감성 카페에서 대화하기',
-    category: '여가',
-    peopleMultiplier: true,
-    items: [
-      { title: '지갑', description: '카페 음료+디저트 비용', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '핸드폰', description: '카페 인증샷+음악', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '보조배터리', description: '긴 시간 카페 이용', baseQuantity: 1, unit: '개' },
-      { title: '이어폰', description: '함께 음악 들을 때', baseQuantity: 1, unit: '개' },
-      { title: '핸드크림', description: '건조한 카페 대비', baseQuantity: 1, unit: '개' },
-      { title: '립밤', description: '대화 많이 할 때', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '마스크', description: '개인 방역용', baseQuantity: 2, unit: '개', multiplier: 1 },
-      { title: '가벼운 외투', description: '카페 에어컨 대비', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '카드/현금', description: '결제수단', baseQuantity: 30000, unit: '원' },
-      { title: '대화 주제', description: '즐거운 대화거리', baseQuantity: 5, unit: '개' },
-    ]
-  },
-  {
     id: 'amusement_park_date',
     name: '놀이공원 데이트',
     description: '🎢 롯데월드/에버랜드 데이트',
@@ -578,65 +523,8 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '멀미약', description: '스릴 넘치는 놀이기구', baseQuantity: 2, unit: '개', multiplier: 1 },
     ]
   },
-  {
-    id: 'night_market_date',
-    name: '야시장 데이트',
-    description: '🌙 동대문/홍대 야시장 구경',
-    category: '여가',
-    peopleMultiplier: true,
-    items: [
-      { title: '현금', description: '야시장 음식+쇼핑', baseQuantity: 50000, unit: '원' },
-      { title: '에코백', description: '쇼핑한 물건 담기', baseQuantity: 2, unit: '개' },
-      { title: '편한 신발', description: '오래 걸어도 편한 신발', baseQuantity: 1, unit: '켤레', multiplier: 1 },
-      { title: '물티슈', description: '야시장 음식 먹고', baseQuantity: 1, unit: '팩' },
-      { title: '핸드폰', description: '야시장 인증샷', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '보조배터리', description: '밤늦게까지 사용', baseQuantity: 1, unit: '개' },
-      { title: '마스크', description: '사람 많은 곳', baseQuantity: 2, unit: '개', multiplier: 1 },
-      { title: '손 소독제', description: '음식 먹기 전', baseQuantity: 1, unit: '개' },
-      { title: '카드', description: '일부 업체 카드 결제', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '호기심', description: '새로운 음식 도전정신', baseQuantity: 1, unit: '개', multiplier: 1 },
-    ]
-  },
-  {
-    id: 'beach_date',
-    name: '바다 데이트',
-    description: '🏖️ 해변에서 로맨틱한 시간',
-    category: '여가',
-    peopleMultiplier: true,
-    items: [
-      { title: '선크림', description: 'SPF50+ 방수 선크림', baseQuantity: 2, unit: '개' },
-      { title: '비치타월', description: '모래사장용 큰 수건', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '선글라스', description: '바다 햇빛 차단', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '모자', description: '넓은 챙 모자', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '시원한 음료', description: '갈증 해소용', baseQuantity: 3, unit: '개', multiplier: 1 },
-      { title: '간식', description: '바다에서 먹을 간식', baseQuantity: 5, unit: '개' },
-      { title: '방수가방', description: '소지품 보관', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '샌들', description: '모래사장용 신발', baseQuantity: 1, unit: '켤레', multiplier: 1 },
-      { title: '카메라', description: '바다 인증샷', baseQuantity: 1, unit: '개' },
-      { title: '여분 옷', description: '바닷바람 대비', baseQuantity: 1, unit: '벌', multiplier: 1 },
-    ]
-  },
 
   // === 한국인 생활 밀착형 템플릿 ===
-  {
-    id: 'subway_commute',
-    name: '지하철 출근',
-    description: '🚇 서울 지하철 출근 준비물',
-    category: '일상',
-    peopleMultiplier: false,
-    items: [
-      { title: '교통카드', description: '티머니/하나로/원패스', baseQuantity: 1, unit: '개' },
-      { title: '핸드폰', description: '길찾기+음악+웹툰', baseQuantity: 1, unit: '개' },
-      { title: '보조배터리', description: '출퇴근 긴 시간 대비', baseQuantity: 1, unit: '개' },
-      { title: '이어폰', description: '지하철 소음 차단', baseQuantity: 1, unit: '개' },
-      { title: '마스크', description: '미세먼지+방역', baseQuantity: 2, unit: '개' },
-      { title: '손수건/휴지', description: '땀+콧물 대비', baseQuantity: 1, unit: '팩' },
-      { title: '회사카드', description: '사원증/출입카드', baseQuantity: 1, unit: '개' },
-      { title: '우산', description: '갑작스런 비 대비', baseQuantity: 1, unit: '개' },
-      { title: '물/음료', description: '러시아워 갈증 대비', baseQuantity: 1, unit: '개' },
-      { title: '간식', description: '아침 거른 날 대비', baseQuantity: 1, unit: '개' },
-    ]
-  },
   {
     id: 'korean_bbq',
     name: '삼겹살 파티',
@@ -696,40 +584,21 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
   },
   {
     id: 'korean_wedding',
-    name: '한국 결혼식 참석',
-    description: '👰 결혼식 하객 준비물',
+    name: '결혼식 하객',
+    description: '👰 결혼식 참석 준비물',
     category: '생활',
     peopleMultiplier: false,
     items: [
-      { title: '축의금', description: '관계별 적정 금액', baseQuantity: 100000, unit: '원' },
-      { title: '축의금 봉투', description: '흰 봉투+검은 펜', baseQuantity: 1, unit: '개' },
-      { title: '정장/한복', description: '격식 맞는 의상', baseQuantity: 1, unit: '벌' },
-      { title: '구두/힐', description: '정장에 맞는 신발', baseQuantity: 1, unit: '켤레' },
-      { title: '핸드백', description: '작은 격식용 가방', baseQuantity: 1, unit: '개' },
-      { title: '휴대폰', description: '초대장+사진촬영', baseQuantity: 1, unit: '개' },
-      { title: '교통비', description: '웨딩홀 왕복', baseQuantity: 20000, unit: '원' },
-      { title: '포켓 티슈', description: '감동의 눈물 대비', baseQuantity: 1, unit: '개' },
-      { title: '립스틱/화장품', description: '화장 고침용', baseQuantity: 1, unit: '세트' },
-      { title: '축하 마음', description: '진심 어린 축하', baseQuantity: 1, unit: '개' },
-    ]
-  },
-  {
-    id: 'korean_pc_cafe',
-    name: 'PC방',
-    description: '🎮 한국 PC방 완전정복',
-    category: '여가',
-    peopleMultiplier: false,
-    items: [
-      { title: '현금', description: 'PC방 이용료+음식값', baseQuantity: 20000, unit: '원' },
-      { title: '신분증', description: '회원가입/본인인증', baseQuantity: 1, unit: '개' },
-      { title: '핸드폰', description: '친구 연락+인증', baseQuantity: 1, unit: '개' },
-      { title: '이어폰/헤드셋', description: '개인 청취용', baseQuantity: 1, unit: '개' },
-      { title: '게임 계정', description: '로그인 정보 암기', baseQuantity: 1, unit: '개' },
-      { title: '간식비', description: '라면+음료 주문비', baseQuantity: 10000, unit: '원' },
-      { title: '손목보호대', description: '장시간 게임 대비', baseQuantity: 1, unit: '개' },
-      { title: '안경', description: '눈 보호용', baseQuantity: 1, unit: '개' },
-      { title: '마스크', description: '개인 위생용', baseQuantity: 1, unit: '개' },
-      { title: '게임할 마음', description: '진정한 게이머의 자세', baseQuantity: 1, unit: '개' },
+      { title: '축의금', description: '새 지폐로 준비, 관계별 적정 금액', baseQuantity: 100000, unit: '원' },
+      { title: '축의금 봉투', description: '흰 봉투 + 검은 펜', baseQuantity: 1, unit: '개' },
+      { title: '정장/한복', description: '신랑신부보다 화려하지 않게', baseQuantity: 1, unit: '벌' },
+      { title: '구두 + 여분 양말/스타킹', description: '편한 구두, 뜯어질 때 대비', baseQuantity: 1, unit: '세트' },
+      { title: '핸드백/클러치', description: '작은 격식용 가방', baseQuantity: 1, unit: '개' },
+      { title: '휴대폰 충전', description: '초대장 확인 + 사진 촬영용', baseQuantity: 1, unit: '개' },
+      { title: '화장품/헤어용품', description: '터치업용', baseQuantity: 1, unit: '세트' },
+      { title: '손수건/티슈', description: '감동의 눈물 대비', baseQuantity: 1, unit: '개' },
+      { title: '하객명부 확인', description: '신랑측/신부측 구분 확인', baseQuantity: 1, unit: '건' },
+      { title: '교통편 확인', description: '웨딩홀 위치, 주차/대중교통 확인', baseQuantity: 1, unit: '건' },
     ]
   },
   {
@@ -770,63 +639,25 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '슬리퍼', description: '편안한 공부환경', baseQuantity: 1, unit: '켤레' },
     ]
   },
-  {
-    id: 'korean_convenience',
-    name: '편의점 야식',
-    description: '🍜 편의점 야식 조합',
-    category: '일상',
-    peopleMultiplier: true,
-    items: [
-      { title: '컵라면', description: '신라면, 짜파게티', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '삼각김밥', description: '참치, 불고기', baseQuantity: 2, unit: '개', multiplier: 1 },
-      { title: '음료', description: '콜라, 사이다', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '과자', description: '허니버터칩, 새우깡', baseQuantity: 1, unit: '개' },
-      { title: '아이스크림', description: '빙그레, 하겐다즈', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '현금/카드', description: '결제수단', baseQuantity: 10000, unit: '원' },
-      { title: '에코백', description: '편의점 봉투 대신', baseQuantity: 1, unit: '개' },
-      { title: '포크/젓가락', description: '편의점 무료제공', baseQuantity: 1, unit: '세트', multiplier: 1 },
-      { title: '물', description: '짠 야식 후 갈증', baseQuantity: 1, unit: '개', multiplier: 1 },
-      { title: '친구들', description: '함께 먹을 사람들', baseQuantity: 1, unit: '명', multiplier: 1 },
-    ]
-  },
-  {
-    id: 'korean_apartment',
-    name: '원룸 이사',
-    description: '🏠 대학생/직장인 원룸 이사',
-    category: '생활',
-    peopleMultiplier: false,
-    items: [
-      { title: '이사업체', description: '포장이사/반포장', baseQuantity: 1, unit: '업체' },
-      { title: '박스', description: '이삿짐 포장용', baseQuantity: 20, unit: '개' },
-      { title: '테이프', description: '박스 밀봉용', baseQuantity: 5, unit: '개' },
-      { title: '뽁뽁이', description: '깨지기 쉬운 물건', baseQuantity: 10, unit: 'm' },
-      { title: '매직펜', description: '박스 라벨링', baseQuantity: 3, unit: '개' },
-      { title: '청소용품', description: '구집 청소용', baseQuantity: 1, unit: '세트' },
-      { title: '주소변경', description: '주민등록 이전', baseQuantity: 1, unit: '건' },
-      { title: '택배 주소변경', description: '쿠팡, 11번가 등', baseQuantity: 1, unit: '건' },
-      { title: '이사 간식', description: '이삿짐센터 간식', baseQuantity: 1, unit: '세트' },
-      { title: '현금', description: '이삿짐센터 팁', baseQuantity: 100000, unit: '원' },
-    ]
-  },
 
   // === 기존 템플릿 (일상 루틴) ===
   {
     id: 'morning_work',
     name: '출근 준비',
-    description: '깜빡하기 쉬운 출근 필수템들',
+    description: '💼 깜빡하기 쉬운 출근 필수템',
     category: '일상',
     peopleMultiplier: false,
     items: [
       { title: '지갑', description: '신용카드, 현금, 신분증', baseQuantity: 1, unit: '개' },
       { title: '교통카드', description: '지하철/버스 카드', baseQuantity: 1, unit: '개' },
       { title: '회사 출입카드', description: '사원증/출입카드', baseQuantity: 1, unit: '개' },
-      { title: '핸드폰', description: '충전 확인', baseQuantity: 1, unit: '개' },
+      { title: '핸드폰 충전', description: '배터리 충분한지 확인', baseQuantity: 1, unit: '개' },
       { title: '이어폰', description: '무선/유선 이어폰', baseQuantity: 1, unit: '개' },
-      { title: '마스크', description: '개인 방역용', baseQuantity: 2, unit: '개' },
-      { title: '우산', description: '날씨 확인 후', baseQuantity: 1, unit: '개' },
-      { title: '텀블러', description: '카페 할인 + 환경보호', baseQuantity: 1, unit: '개' },
+      { title: '보조배터리', description: '출퇴근 시간 대비', baseQuantity: 1, unit: '개' },
+      { title: '텀블러/물', description: '카페 할인 + 수분 보충', baseQuantity: 1, unit: '개' },
+      { title: '우산', description: '날씨 확인 후 챙기기', baseQuantity: 1, unit: '개' },
       { title: '간식', description: '오후 허기 대비', baseQuantity: 1, unit: '개' },
-      { title: '충전기', description: '휴대용 보조배터리', baseQuantity: 1, unit: '개' },
+      { title: '손수건/휴지', description: '개인 위생용', baseQuantity: 1, unit: '개' },
     ]
   },
   {
@@ -977,25 +808,6 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
     ]
   },
   {
-    id: 'first_date',
-    name: '첫 만남 데이트',
-    description: '😍 첫 인상이 중요한 데이트',
-    category: '여가',
-    peopleMultiplier: false,
-    items: [
-      { title: '데이트 의상', description: '🔥꿀팁: TPO에 맞는 깔끔한 옷차림', baseQuantity: 1, unit: '벌' },
-      { title: '향수+립밤', description: '은은한 향 + 입술 관리', baseQuantity: 1, unit: '세트' },
-      { title: '휴대폰 완충', description: '데이트 코스 검색 + 연락용', baseQuantity: 1, unit: '개' },
-      { title: '데이트 비용', description: '🔥꿀팁: 예상보다 20% 더 준비', baseQuantity: 100000, unit: '원' },
-      { title: '미니 가방', description: '지갑+핸드크림+립밤 등', baseQuantity: 1, unit: '개' },
-      { title: '장소 위치', description: '만남 장소 찾기 대비 미리 확인', baseQuantity: 1, unit: '개' },
-      { title: '대화 주제', description: '🔥꿀팁: 공통 관심사 5가지 준비', baseQuantity: 5, unit: '개' },
-      { title: '사탕+민트', description: '식사 후 입냄새 관리', baseQuantity: 1, unit: '세트' },
-      { title: '우산', description: '갑작스런 비 대비 체크', baseQuantity: 1, unit: '개' },
-      { title: '추가 만남 제안', description: '🔥꿀팁: 2차 데이트 장소 미리 생각', baseQuantity: 1, unit: '개' },
-    ]
-  },
-  {
     id: 'remote_work',
     name: '재택근무',
     description: '🏠 집에서 효율적인 근무',
@@ -1138,27 +950,6 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '선글라스+선크림', description: '🔥꿀팁: SPF50 이상 자외선차단', baseQuantity: 1, unit: '세트', multiplier: 1 },
       { title: '번역앱+지도앱', description: '🔥꿀팁: 구글번역+지도 오프라인 다운', baseQuantity: 1, unit: '세트' },
       { title: '비상연락처 메모', description: '🔥꿀팁: 대사관+보험사+가족 연락처', baseQuantity: 1, unit: '개' },
-    ]
-  },
-  {
-    id: 'wedding_guest',
-    name: '결혼식 하객 준비',
-    description: '💒 결혼식 참석을 위한 완벽 준비',
-    category: '여가',
-    peopleMultiplier: false,
-    items: [
-      { title: '축의금 준비', description: '🔥꿀팁: 새 지폐로 축의금봉투에', baseQuantity: 1, unit: '개' },
-      { title: '정장/한복', description: '🔥꿀팁: 신랑신부보다 화려하지 않게', baseQuantity: 1, unit: '벌' },
-      { title: '구두+양말', description: '🔥꿀팁: 편한 구두+여분양말', baseQuantity: 1, unit: '세트' },
-      { title: '핸드백/클러치', description: '🔥꿀팁: 작은 가방+필수품만', baseQuantity: 1, unit: '개' },
-      { title: '액세서리', description: '🔥꿀팁: 과하지 않은 정도의 장신구', baseQuantity: 1, unit: '세트' },
-      { title: '화장품/헤어용품', description: '🔥꿀팁: 터치업용 화장품+헤어스프레이', baseQuantity: 1, unit: '세트' },
-      { title: '카메라/스마트폰', description: '🔥꿀팁: 충전 완료+보조배터리', baseQuantity: 1, unit: '개' },
-      { title: '축하 메시지 준비', description: '🔥꿀팁: 진심이 담긴 축하인사 미리', baseQuantity: 1, unit: '개' },
-      { title: '하객명부 확인', description: '🔥꿀팁: 신랑신부측 구분 확인', baseQuantity: 1, unit: '개' },
-      { title: '교통편 준비', description: '🔥꿀팁: 대중교통 또는 대리운전', baseQuantity: 1, unit: '개' },
-      { title: '여분 스타킹/양말', description: '🔥꿀팁: 뜯어지거나 더러워질 때 대비', baseQuantity: 1, unit: '개' },
-      { title: '손수건/티슈', description: '🔥꿀팁: 감동의 눈물 대비', baseQuantity: 1, unit: '개' },
     ]
   },
 
@@ -1406,6 +1197,97 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
       { title: '카메라(추억촬영)', description: '파티 순간 기록용', baseQuantity: 1, unit: '개' },
       { title: '일회용접시/컵', description: '뒷정리 편한 일회용 식기', baseQuantity: 1, unit: '세트', multiplier: 1 },
       { title: '쓰레기봉투', description: '파티 후 정리용 대형 봉투', baseQuantity: 3, unit: '개' },
+    ]
+  },
+
+  // === 신규 인기 템플릿 ===
+  {
+    id: 'military_enlistment',
+    name: '군대 입대 준비',
+    description: '🪖 입영 당일 준비물 체크리스트',
+    category: '생활',
+    peopleMultiplier: false,
+    items: [
+      { title: '입영통지서', description: '반드시 원본 지참', baseQuantity: 1, unit: '장' },
+      { title: '신분증', description: '주민등록증 또는 운전면허증', baseQuantity: 1, unit: '개' },
+      { title: '통장 사본', description: '급여 입금용 (본인 명의)', baseQuantity: 1, unit: '장' },
+      { title: '검은 속옷', description: '검정 면 티셔츠 + 검정 사각팬티', baseQuantity: 5, unit: '벌' },
+      { title: '검은 양말', description: '검정 무지 면 양말', baseQuantity: 5, unit: '켤레' },
+      { title: '세면도구', description: '칫솔, 치약, 면도기, 폼클렌징', baseQuantity: 1, unit: '세트' },
+      { title: '수건', description: '어두운 색 수건', baseQuantity: 2, unit: '장' },
+      { title: '현금', description: '부대 내 PX 이용용 (5~10만원)', baseQuantity: 100000, unit: '원' },
+      { title: '핸드폰 충전기', description: '충전기 + 케이블', baseQuantity: 1, unit: '개' },
+      { title: '필기도구', description: '검정 볼펜 + 작은 수첩', baseQuantity: 1, unit: '세트' },
+      { title: '자물쇠', description: '사물함용 번호 자물쇠', baseQuantity: 1, unit: '개' },
+      { title: '가족 연락처 메모', description: '핸드폰 없을 때 대비 종이 메모', baseQuantity: 1, unit: '장' },
+    ]
+  },
+  {
+    id: 'first_living_alone',
+    name: '자취 시작 (첫 살림)',
+    description: '🏠 첫 자취, 뭘 사야 하지? 필수 구매 목록',
+    category: '생활',
+    peopleMultiplier: false,
+    items: [
+      // 주방
+      { title: '냄비/프라이팬', description: '기본 조리도구 세트', baseQuantity: 1, unit: '세트' },
+      { title: '밥솥/전자레인지', description: '혼밥 필수 가전', baseQuantity: 1, unit: '대' },
+      { title: '수저/젓가락/접시', description: '식기 세트', baseQuantity: 1, unit: '세트' },
+      { title: '기본 양념', description: '소금, 간장, 식용유, 고추장', baseQuantity: 1, unit: '세트' },
+      { title: '행주/수세미/세제', description: '주방 청소용품', baseQuantity: 1, unit: '세트' },
+      // 침실
+      { title: '이불/베개', description: '계절에 맞는 침구', baseQuantity: 1, unit: '세트' },
+      { title: '커튼/블라인드', description: '채광 조절 + 사생활 보호', baseQuantity: 1, unit: '세트' },
+      { title: '옷걸이/행거', description: '옷 정리용', baseQuantity: 10, unit: '개' },
+      // 욕실
+      { title: '수건', description: '세수용 + 목욕용', baseQuantity: 4, unit: '장' },
+      { title: '세면도구', description: '칫솔, 치약, 샴푸, 바디워시', baseQuantity: 1, unit: '세트' },
+      { title: '화장지', description: '넉넉히 사두기', baseQuantity: 12, unit: '롤' },
+      { title: '세탁세제/섬유유연제', description: '세탁용', baseQuantity: 1, unit: '세트' },
+      // 청소
+      { title: '청소기/밀대', description: '바닥 청소용', baseQuantity: 1, unit: '개' },
+      { title: '쓰레기통/봉투', description: '분리수거용 + 일반 쓰레기', baseQuantity: 1, unit: '세트' },
+      // 기타
+      { title: '멀티탭', description: '콘센트 부족 대비', baseQuantity: 2, unit: '개' },
+      { title: '상비약', description: '소화제, 진통제, 밴드', baseQuantity: 1, unit: '세트' },
+    ]
+  },
+  {
+    id: 'birthday_party',
+    name: '생일파티/홈파티',
+    description: '🎂 집에서 하는 생일파티 준비물',
+    category: '여가',
+    peopleMultiplier: true,
+    items: [
+      { title: '케이크', description: '사전 예약 추천, 초 잊지 말기', baseQuantity: 1, unit: '개' },
+      { title: '파티 음식', description: '피자, 치킨, 핑거푸드 등', baseQuantity: 2, unit: '개', multiplier: 1 },
+      { title: '음료', description: '탄산, 주스, 술 등', baseQuantity: 2, unit: '개', multiplier: 1 },
+      { title: '생일 선물', description: '생일 주인공에게 줄 선물', baseQuantity: 1, unit: '개' },
+      { title: '풍선/장식', description: '생일 축하 배너, 풍선', baseQuantity: 1, unit: '세트' },
+      { title: '파티 모자/소품', description: '고깔모자, 호루라기 등', baseQuantity: 1, unit: '세트', multiplier: 1 },
+      { title: '일회용 접시/컵', description: '인원수만큼 + 여유분', baseQuantity: 1, unit: '세트', multiplier: 1 },
+      { title: '카메라', description: '파티 순간 촬영', baseQuantity: 1, unit: '개' },
+      { title: '블루투스 스피커', description: '파티 음악 재생', baseQuantity: 1, unit: '개' },
+      { title: '쓰레기봉투', description: '파티 후 정리용', baseQuantity: 3, unit: '개' },
+    ]
+  },
+  {
+    id: 'daycare_prep',
+    name: '어린이집/유치원 준비물',
+    description: '👶 아이 어린이집·유치원 첫 등원 준비',
+    category: '생활',
+    peopleMultiplier: false,
+    items: [
+      { title: '이름표/네임스티커', description: '모든 소지품에 이름 표시', baseQuantity: 1, unit: '세트' },
+      { title: '실내화', description: '원에서 신을 신발', baseQuantity: 1, unit: '켤레' },
+      { title: '칫솔/치약 세트', description: '양치 시간용 (이름 표시)', baseQuantity: 1, unit: '세트' },
+      { title: '낮잠 이불', description: '개인 낮잠용 이불 세트', baseQuantity: 1, unit: '세트' },
+      { title: '여벌 옷', description: '상의+하의+속옷 (활동 중 더러워질 때)', baseQuantity: 2, unit: '벌' },
+      { title: '물통/텀블러', description: '개인 물통 (이름 표시)', baseQuantity: 1, unit: '개' },
+      { title: '가방', description: '아이 책가방/배낭', baseQuantity: 1, unit: '개' },
+      { title: '알림장/수첩', description: '선생님과 소통용', baseQuantity: 1, unit: '권' },
+      { title: '비상 연락처', description: '부모/보호자 연락처 제출', baseQuantity: 1, unit: '건' },
+      { title: '필요 서류', description: '건강검진표, 예방접종 증명서', baseQuantity: 1, unit: '세트' },
     ]
   }
 ];

@@ -344,31 +344,8 @@ const HomeScreen = () => {
         )}
       </View>
 
-      {/* Popular Templates Section */}
-      {!searchTerm && (
-        <View style={styles.popularSection}>
-          <Text style={styles.sectionTitle}>인기 템플릿</Text>
-          <FlatList
-            data={popularTemplates}
-            renderItem={renderPopularCard}
-            keyExtractor={keyExtractor}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.popularScrollContainer}
-            removeClippedSubviews={true}
-            initialNumToRender={3}
-            maxToRenderPerBatch={2}
-            windowSize={5}
-          />
-        </View>
-      )}
-
       {/* All Templates List */}
       <View style={styles.scrollView}>
-        {!searchTerm && (
-          <Text style={styles.sectionTitle}>모든 템플릿</Text>
-        )}
-
         {filteredTemplates.length === 0 && searchTerm ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
@@ -384,13 +361,35 @@ const HomeScreen = () => {
             data={searchTerm ? filteredTemplates : regularTemplates}
             renderItem={renderTemplateCard}
             keyExtractor={keyExtractor}
+            numColumns={2}
+            columnWrapperStyle={styles.columnWrapper}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             removeClippedSubviews={true}
-            initialNumToRender={5}
-            maxToRenderPerBatch={3}
+            initialNumToRender={6}
+            maxToRenderPerBatch={4}
             windowSize={10}
             updateCellsBatchingPeriod={100}
+            ListHeaderComponent={!searchTerm ? (
+              <>
+                <View style={styles.popularSection}>
+                  <Text style={styles.sectionTitle}>인기 템플릿</Text>
+                  <FlatList
+                    data={popularTemplates}
+                    renderItem={renderPopularCard}
+                    keyExtractor={keyExtractor}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.popularScrollContainer}
+                    removeClippedSubviews={true}
+                    initialNumToRender={3}
+                    maxToRenderPerBatch={2}
+                    windowSize={5}
+                  />
+                </View>
+                <Text style={styles.sectionTitle}>모든 템플릿</Text>
+              </>
+            ) : undefined}
           />
         )}
       </View>
@@ -689,7 +688,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingHorizontal: 16,
     paddingBottom: 20,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   emptyState: {
     alignItems: 'center',
@@ -715,7 +719,9 @@ const styles = StyleSheet.create({
   },
   popularSection: {
     backgroundColor: 'white',
-    paddingVertical: 20,
+    paddingVertical: 16,
+    marginHorizontal: -16,
+    marginBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
