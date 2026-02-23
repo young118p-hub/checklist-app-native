@@ -391,20 +391,54 @@ export const SITUATION_TEMPLATES: SituationTemplate[] = [
   {
     id: 'apartment_viewing',
     name: '부동산 집보기',
-    description: '🏠 아파트/원룸 매물 보기',
+    description: '🏠 원룸/아파트 매물 볼 때 준비물 + 현장 체크리스트',
     category: '생활',
     peopleMultiplier: false,
     items: [
+      // 준비물
       { title: '신분증', description: '본인 확인용', baseQuantity: 1, unit: '개' },
       { title: '메모장/펜', description: '매물 정보 기록용', baseQuantity: 1, unit: '세트' },
-      { title: '핸드폰', description: '사진 촬영, 연락용', baseQuantity: 1, unit: '개' },
+      { title: '핸드폰', description: '사진/영상 촬영, 연락용', baseQuantity: 1, unit: '개' },
       { title: '줄자', description: '가구 배치 측정용', baseQuantity: 1, unit: '개' },
-      { title: '손전등', description: '어두운 곳 확인용', baseQuantity: 1, unit: '개' },
-      { title: '체크리스트', description: '확인사항 목록', baseQuantity: 1, unit: '개' },
-      { title: '계약 관련 서류', description: '소득증명서, 통장사본', baseQuantity: 1, unit: '세트' },
-      { title: '보증금/현금', description: '계약금', baseQuantity: 1, unit: '세트' },
-      { title: '교통카드', description: '대중교통 확인용', baseQuantity: 1, unit: '개' },
-      { title: '동반자', description: '객관적 판단 도우미', baseQuantity: 1, unit: '명' },
+      { title: '계약 관련 서류', description: '소득증명서, 통장사본 등', baseQuantity: 1, unit: '세트' },
+      // 수압/배수
+      { title: '수압 확인', description: '싱크대, 화장실 수도 틀어보기', baseQuantity: 1, unit: '건' },
+      { title: '온수 확인', description: '온수 나오는지, 나오는 속도 체크', baseQuantity: 1, unit: '건' },
+      { title: '배수 확인', description: '싱크대, 세면대, 화장실 배수 잘 되는지', baseQuantity: 1, unit: '건' },
+      { title: '변기 물 내리기', description: '수압, 역류 여부 확인', baseQuantity: 1, unit: '건' },
+      // 채광/환기/소음
+      { title: '채광 확인', description: '낮에 방문해서 햇빛 들어오는지 확인', baseQuantity: 1, unit: '건' },
+      { title: '창문 방향', description: '남향/동향 등 확인, 앞 건물 가림 여부', baseQuantity: 1, unit: '건' },
+      { title: '단열/외풍', description: '창문 닫고 외풍 확인, 이중창 여부, 실리콘 상태', baseQuantity: 1, unit: '건' },
+      { title: '소음 확인', description: '도로/골목 소음, 주변 유흥가/공사장 여부', baseQuantity: 1, unit: '건' },
+      { title: '방음/층간소음', description: '벽 두드려서 두께 확인, 윗층/옆집 소리', baseQuantity: 1, unit: '건' },
+      { title: '환기 상태', description: '창문 개폐 잘 되는지, 환풍기 작동 확인', baseQuantity: 1, unit: '건' },
+      // 상태 점검
+      { title: '곰팡이/습기', description: '벽, 천장, 화장실, 창문 틀 곰팡이 확인', baseQuantity: 1, unit: '건' },
+      { title: '벽지/바닥 상태', description: '들뜸, 찢어짐, 얼룩 확인', baseQuantity: 1, unit: '건' },
+      { title: '보일러/난방', description: '작동 여부, 연식, 개별/중앙난방 확인', baseQuantity: 1, unit: '건' },
+      { title: '콘센트 확인', description: '개수, 위치, 작동 여부 확인', baseQuantity: 1, unit: '건' },
+      { title: '벌레/해충 흔적', description: '바퀴벌레 트랩, 구석 흔적, 1층 음식점 여부', baseQuantity: 1, unit: '건' },
+      { title: '옵션 가전 상태', description: '에어컨, 냉장고, 세탁기, 인덕션 작동/연식 확인', baseQuantity: 1, unit: '건' },
+      { title: '수납공간', description: '옷장, 신발장, 서랍 등 수납 충분한지 확인', baseQuantity: 1, unit: '건' },
+      { title: '화장실 환풍', description: '화장실 창문 또는 환풍기 유무 (없으면 곰팡이 심함)', baseQuantity: 1, unit: '건' },
+      // 보안/편의
+      { title: '현관문 잠금장치', description: '도어락 상태, 이중잠금 여부', baseQuantity: 1, unit: '건' },
+      { title: 'CCTV/보안', description: '건물 입구, 복도, 주차장 CCTV 확인', baseQuantity: 1, unit: '건' },
+      { title: '야간 치안', description: '귀갓길 가로등, CCTV, 인적 확인 (저녁에도 방문)', baseQuantity: 1, unit: '건' },
+      { title: '핸드폰 수신', description: '집 안에서 통신 상태 확인', baseQuantity: 1, unit: '건' },
+      { title: '엘리베이터', description: '고층이면 엘리베이터 유무, 이사 시 필수', baseQuantity: 1, unit: '건' },
+      // 주변 환경
+      { title: '교통 접근성', description: '역/버스 정류장 도보 거리 확인', baseQuantity: 1, unit: '건' },
+      { title: '편의시설', description: '편의점, 마트, 세탁소 등 주변 확인', baseQuantity: 1, unit: '건' },
+      { title: '쓰레기 배출', description: '분리수거장 위치, 음식물 처리방식 확인', baseQuantity: 1, unit: '건' },
+      { title: '주차 공간', description: '주차 가능 여부, 추가비용 확인', baseQuantity: 1, unit: '건' },
+      { title: '1층 상가 확인', description: '고깃집/술집 있으면 냄새, 소음, 벌레 유입 주의', baseQuantity: 1, unit: '건' },
+      // 비용/계약
+      { title: '관리비 확인', description: '포함 항목 세부 확인 (전기/수도/가스/인터넷)', baseQuantity: 1, unit: '건' },
+      { title: '계량기 분리 여부', description: '전기/수도 세대별 분리 안 되면 타 세대 부담 가능', baseQuantity: 1, unit: '건' },
+      { title: '등기부등본 확인', description: '근저당, 압류 등 권리관계 확인 (전세사기 예방)', baseQuantity: 1, unit: '건' },
+      { title: '전입신고 가능 여부', description: '전입신고 불가하면 대항력 확보 못함', baseQuantity: 1, unit: '건' },
     ]
   },
 
