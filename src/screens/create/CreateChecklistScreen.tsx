@@ -213,8 +213,11 @@ const CreateChecklistScreen = () => {
               <View style={styles.quantityContainer}>
                 <Input
                   placeholder="수량"
-                  value={item.quantity.toString()}
-                  onChangeText={(text) => updateItem(item.id, 'quantity', parseInt(text) || 1)}
+                  value={item.quantity === 0 ? '' : item.quantity.toString()}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, '');
+                    updateItem(item.id, 'quantity', cleaned === '' ? 0 : parseInt(cleaned, 10));
+                  }}
                   keyboardType="numeric"
                   containerStyle={styles.quantityInput}
                 />
