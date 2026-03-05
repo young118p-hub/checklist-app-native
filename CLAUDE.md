@@ -7,7 +7,7 @@
 - Package: com.checklist.amajdaigeo
 
 ## Build Config
-- versionCode: 26 (마지막 빌드)
+- versionCode: 27 (마지막 빌드)
 - compileSdkVersion: 35, targetSdkVersion: 35
 - 64-bit only (arm64-v8a, x86_64) - 16KB page size 대응
 - Plugin: `plugins/withPageAlignment.js` - ABI 필터 + gradle.properties 설정
