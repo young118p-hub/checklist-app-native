@@ -220,7 +220,6 @@ const ChecklistDetailScreen = () => {
           text: '삭제',
           style: 'destructive',
           onPress: async () => {
-            await trackChecklistCompletion(currentChecklist);
             await deleteChecklist(currentChecklist.id);
             navigation.goBack();
           },

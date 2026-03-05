@@ -149,11 +149,26 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   deleteChecklist: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      set((state) => ({
-        checklists: state.checklists.filter(c => c.id !== id),
-        currentChecklist: state.currentChecklist?.id === id ? null : state.currentChecklist,
-        loading: false
-      }));
+      const deletedChecklist = get().checklists.find(c => c.id === id);
+      const remainingChecklists = get().checklists.filter(c => c.id !== id);
+
+      // 삭제되는 체크리스트의 항목 중, 다른 체크리스트에 없는 항목은 analytics에서 제거
+      let newAnalytics = [...get().analytics];
+      if (deletedChecklist) {
+        const remainingItemTitles = new Set(
+          remainingChecklists.flatMap(c => c.items.map(i => i.title))
+        );
+        newAnalytics = newAnalytics.filter(
+          a => remainingItemTitles.has(a.title)
+        );
+      }
+
+      set({
+        checklists: remainingChecklists,
+        currentChecklist: get().currentChecklist?.id === id ? null : get().currentChecklist,
+        analytics: newAnalytics,
+        loading: false,
+      });
       await get().saveToStorage();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false });
