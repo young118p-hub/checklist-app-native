@@ -166,16 +166,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       {notification.message}
                     </Text>
                     
-                    {notification.scheduledFor && (
-                      <Text style={styles.scheduledText}>
-                        ⏱️ 예정: {new Date(notification.scheduledFor).toLocaleString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Text>
-                    )}
                   </View>
                 </TouchableOpacity>
               ))}
