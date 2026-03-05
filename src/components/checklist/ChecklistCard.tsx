@@ -7,6 +7,7 @@ interface ChecklistCardProps {
   checklist: Checklist;
   onPress: () => void;
   onEdit?: (id: string, newTitle: string) => void;
+  onDelete?: (id: string, title: string) => void;
   showEditButton?: boolean;
 }
 
@@ -14,6 +15,7 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
   checklist,
   onPress,
   onEdit,
+  onDelete,
   showEditButton = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -25,6 +27,7 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
 
   const handleEditPress = (e: any) => {
     e.stopPropagation();
+    setEditTitle(checklist.title);
     setIsEditing(true);
   };
 
@@ -47,7 +50,12 @@ export const ChecklistCard: React.FC<ChecklistCardProps> = ({
   };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      onPress={isEditing ? undefined : onPress}
+      onLongPress={isEditing ? undefined : () => onDelete?.(checklist.id, checklist.title)}
+      delayLongPress={500}
+      activeOpacity={isEditing ? 1 : 0.8}
+    >
       <Card style={styles.card}>
         <View style={styles.header}>
           {isEditing ? (

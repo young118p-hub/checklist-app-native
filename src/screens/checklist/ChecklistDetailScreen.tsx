@@ -8,6 +8,8 @@ import {
   Alert,
   TextInput,
   TouchableOpacity,
+  Modal,
+  Vibration,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,7 +23,7 @@ import { EditableTitle } from '../../components/ui/EditableTitle';
 import { CelebrationModal } from '../../components/ui/CelebrationModal';
 import { SmartRecommendations } from '../../components/ui/SmartRecommendations';
 import { EnhancedShareModal } from '../../components/ui/EnhancedShareModal';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, ChecklistItem } from '../../types';
 
 type ChecklistDetailRouteProp = RouteProp<RootStackParamList, 'ChecklistDetail'>;
 type ChecklistDetailNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -42,16 +44,20 @@ const ChecklistDetailScreen = () => {
     updateChecklist,
     addItem,
     deleteItem,
+    updateItem,
     trackChecklistCompletion
   } = useChecklistStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [previousCompletionRate, setPreviousCompletionRate] = useState(0);
+  const [previousCompletionRate, setPreviousCompletionRate] = useState(-1);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
     fetchChecklist(id);
@@ -62,6 +68,12 @@ const ChecklistDetailScreen = () => {
       navigation.setOptions({
         title: currentChecklist.title,
       });
+      // 처음 로드 시 현재 완료율로 초기화 (잘못된 축하 모달 방지)
+      if (previousCompletionRate === -1) {
+        const completed = currentChecklist.items.filter(i => i.isCompleted).length;
+        const total = currentChecklist.items.length;
+        setPreviousCompletionRate(total > 0 ? Math.round((completed / total) * 100) : 0);
+      }
     }
   }, [currentChecklist, navigation]);
 
@@ -85,6 +97,29 @@ const ChecklistDetailScreen = () => {
     } catch (error) {
       Alert.alert('오류', '제목 변경에 실패했습니다.');
     }
+  };
+
+  const handleEditItem = (itemId: string) => {
+    const item = currentChecklist?.items.find(i => i.id === itemId);
+    if (!item) return;
+    Vibration.vibrate(50);
+    setEditingItem(item);
+    setEditTitle(item.title);
+    setEditDescription(item.description || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    const trimmed = editTitle.trim();
+    if (!trimmed) {
+      Alert.alert('알림', '항목 이름을 입력해주세요.');
+      return;
+    }
+    await updateItem(editingItem.id, {
+      title: trimmed,
+      description: editDescription.trim() || undefined,
+    });
+    setEditingItem(null);
   };
 
   const handleItemToggle = async (itemId: string) => {
@@ -306,13 +341,15 @@ const ChecklistDetailScreen = () => {
           onAddRecommendation={handleAddRecommendation}
         />
 
-        {currentChecklist.items
+        {[...currentChecklist.items]
           .sort((a, b) => a.order - b.order)
           .map((item) => (
             <ChecklistItemComponent
               key={item.id}
               item={item}
               onToggle={handleItemToggle}
+              onPress={() => handleItemToggle(item.id)}
+              onEdit={handleEditItem}
               onDelete={handleDeleteItem}
               showDeleteButton={true}
             />
@@ -405,6 +442,54 @@ const ChecklistDetailScreen = () => {
         onClose={() => setShowShareModal(false)}
         checklist={currentChecklist}
       />
+
+      {/* 항목 수정 모달 */}
+      <Modal
+        visible={!!editingItem}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingItem(null)}
+      >
+        <TouchableOpacity
+          style={styles.editModalOverlay}
+          activeOpacity={1}
+          onPress={() => setEditingItem(null)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.editModalContent}>
+            <Text style={styles.editModalTitle}>항목 수정</Text>
+            <Text style={styles.editModalLabel}>이름 *</Text>
+            <TextInput
+              style={styles.editModalInput}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder="항목 이름"
+              autoFocus
+            />
+            <Text style={styles.editModalLabel}>설명 (선택)</Text>
+            <TextInput
+              style={[styles.editModalInput, { minHeight: 60 }]}
+              value={editDescription}
+              onChangeText={setEditDescription}
+              placeholder="설명을 입력하세요"
+              multiline
+            />
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={styles.editModalCancel}
+                onPress={() => setEditingItem(null)}
+              >
+                <Text style={styles.editModalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editModalSave}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.editModalSaveText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -578,6 +663,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  editModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  editModalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  editModalInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
+    marginBottom: 14,
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  editModalCancel: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  editModalSave: {
+    flex: 1,
+    backgroundColor: '#DC2626',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editModalSaveText: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',

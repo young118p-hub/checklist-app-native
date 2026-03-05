@@ -78,35 +78,37 @@ export const CelebrationModal: React.FC<CelebrationModalProps> = ({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <Text style={styles.emoji}>{celebration.emoji}</Text>
-          <Text style={styles.title}>{celebration.title}</Text>
-          <Text style={styles.subtitle}>{checklistTitle}</Text>
-          <Text style={styles.message}>{celebration.message}</Text>
-          
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[styles.progressFill, { width: `${completionRate}%` }]} 
-              />
-            </View>
-            <Text style={styles.progressText}>{completionRate}% 완료</Text>
-          </View>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1}>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <Text style={styles.emoji}>{celebration.emoji}</Text>
+            <Text style={styles.title}>{celebration.title}</Text>
+            <Text style={styles.subtitle}>{checklistTitle}</Text>
+            <Text style={styles.message}>{celebration.message}</Text>
 
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>계속하기</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[styles.progressFill, { width: `${completionRate}%` }]}
+                />
+              </View>
+              <Text style={styles.progressText}>{completionRate}% 완료</Text>
+            </View>
+
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>계속하기</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 };

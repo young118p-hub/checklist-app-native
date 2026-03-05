@@ -7,6 +7,7 @@ interface ChecklistItemProps {
   item: ChecklistItemType;
   onToggle: (itemId: string) => void;
   onPress?: () => void;
+  onEdit?: (itemId: string) => void;
   onDelete?: (itemId: string) => void;
   showDeleteButton?: boolean;
 }
@@ -15,6 +16,7 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
   item,
   onToggle,
   onPress,
+  onEdit,
   onDelete,
   showDeleteButton = false
 }) => {
@@ -39,11 +41,13 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
   };
 
   // 꿀팁인지 확인
-  const isHoneyTip = item.description?.includes('🔥꿀팁') || item.description?.includes('🔥');
+  const isHoneyTip = item.description?.includes('🔥꿀팁');
   
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       onPress={onPress}
+      onLongPress={() => onEdit?.(item.id)}
+      delayLongPress={400}
       style={[styles.container, isHoneyTip && styles.honeyTipContainer]}
       activeOpacity={0.8}
     >
@@ -57,6 +61,7 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
           <TouchableOpacity
             style={[styles.checkbox, item.isCompleted && styles.checkboxCompleted]}
             onPress={handleToggle}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             {item.isCompleted && (
               <Text style={styles.checkmark}>✓</Text>
@@ -73,7 +78,7 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
               {item.title}
             </Text>
             <View style={styles.rightActions}>
-              {item.quantity && item.quantity > 1 && (
+              {item.quantity && (item.quantity > 1 || item.unit) && (
                 <Text style={styles.quantity}>
                   {item.quantity}{item.unit}
                 </Text>
@@ -82,6 +87,7 @@ export const ChecklistItemComponent: React.FC<ChecklistItemProps> = React.memo((
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => onDelete(item.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.deleteIcon}>🗑️</Text>
                 </TouchableOpacity>

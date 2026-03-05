@@ -86,9 +86,10 @@ const MyChecklistsScreen = () => {
       checklist={item}
       onPress={() => handleChecklistPress(item.id)}
       onEdit={handleEditTitle}
+      onDelete={handleDeleteChecklist}
       showEditButton={true}
     />
-  ), [handleChecklistPress, handleEditTitle]);
+  ), [handleChecklistPress, handleEditTitle, handleDeleteChecklist]);
 
   const keyExtractor = useCallback((item: Checklist) => item.id, []);
 
@@ -242,6 +243,14 @@ const MyChecklistsScreen = () => {
               />
             }
             ListHeaderComponent={<AnalyticsCard />}
+            ListEmptyComponent={
+              <View style={styles.filteredEmpty}>
+                <Text style={styles.filteredEmptyIcon}>🔍</Text>
+                <Text style={styles.filteredEmptyText}>
+                  {searchTerm ? `"${searchTerm}" 검색 결과가 없습니다` : '해당하는 체크리스트가 없습니다'}
+                </Text>
+              </View>
+            }
             ListFooterComponent={<View style={styles.bottomPadding} />}
             removeClippedSubviews={true}
             initialNumToRender={5}
@@ -368,6 +377,21 @@ const styles = StyleSheet.create({
   },
   filterButtonTextActive: {
     color: 'white',
+  },
+  filteredEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  filteredEmptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+    opacity: 0.5,
+  },
+  filteredEmptyText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });
 

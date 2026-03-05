@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { RootStackParamList, CreateChecklistData } from '../../types';
 import { useTabSwitch } from '../../navigation/AppNavigator';
+import { generateUUID } from '../../utils/uuid';
 
 type CreateChecklistNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -32,6 +33,7 @@ const CreateChecklistScreen = () => {
   const navigation = useNavigation<CreateChecklistNavigationProp>();
   const switchTab = useTabSwitch();
   const { createChecklist, loading } = useChecklistStore();
+  const scrollViewRef = useRef<ScrollView>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -41,7 +43,7 @@ const CreateChecklistScreen = () => {
   
   const [items, setItems] = useState<ChecklistItemInput[]>([
     {
-      id: '1',
+      id: generateUUID(),
       title: '',
       description: '',
       quantity: 1,
@@ -49,19 +51,18 @@ const CreateChecklistScreen = () => {
     }
   ]);
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
-
   const addItem = () => {
     setItems([
       ...items,
       {
-        id: generateId(),
+        id: generateUUID(),
         title: '',
         description: '',
         quantity: 1,
         unit: '',
       }
     ]);
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const removeItem = (itemId: string) => {
@@ -111,6 +112,9 @@ const CreateChecklistScreen = () => {
 
     try {
       await createChecklist(checklistData);
+      // 폼 초기화
+      setFormData({ title: '', description: '', peopleCount: 1 });
+      setItems([{ id: generateUUID(), title: '', description: '', quantity: 1, unit: '' }]);
       Alert.alert(
         '체크리스트 생성 완료!',
         '새로운 체크리스트가 생성되었습니다.',
@@ -128,7 +132,8 @@ const CreateChecklistScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -156,11 +161,12 @@ const CreateChecklistScreen = () => {
             <Text style={styles.inputLabel}>인원 수</Text>
             <View style={styles.counterContainer}>
               <TouchableOpacity
-                style={styles.counterButton}
-                onPress={() => formData.peopleCount > 1 && 
+                style={[styles.counterButton, formData.peopleCount <= 1 && styles.counterButtonDisabled]}
+                onPress={() => formData.peopleCount > 1 &&
                   setFormData(prev => ({ ...prev, peopleCount: prev.peopleCount - 1 }))}
+                disabled={formData.peopleCount <= 1}
               >
-                <Text style={styles.counterButtonText}>-</Text>
+                <Text style={[styles.counterButtonText, formData.peopleCount <= 1 && styles.counterButtonTextDisabled]}>-</Text>
               </TouchableOpacity>
               <Text style={styles.counterValue}>{formData.peopleCount}명</Text>
               <TouchableOpacity
@@ -192,6 +198,7 @@ const CreateChecklistScreen = () => {
                   <TouchableOpacity
                     onPress={() => removeItem(item.id)}
                     style={styles.removeButton}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.removeButtonText}>✕</Text>
                   </TouchableOpacity>
@@ -232,6 +239,10 @@ const CreateChecklistScreen = () => {
               </View>
             </View>
           ))}
+
+          <TouchableOpacity style={styles.addItemBottom} onPress={addItem}>
+            <Text style={styles.addItemBottomText}>+ 항목 추가</Text>
+          </TouchableOpacity>
         </Card>
 
         <View style={styles.buttonContainer}>
@@ -293,10 +304,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 16,
   },
+  counterButtonDisabled: {
+    opacity: 0.3,
+  },
   counterButtonText: {
     fontSize: 20,
     fontWeight: '600',
     color: '#374151',
+  },
+  counterButtonTextDisabled: {
+    color: '#9CA3AF',
   },
   counterValue: {
     fontSize: 18,
@@ -356,6 +373,19 @@ const styles = StyleSheet.create({
   unitInput: {
     flex: 1,
     marginVertical: 4,
+  },
+  addItemBottom: {
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  addItemBottomText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   buttonContainer: {
     paddingHorizontal: 16,

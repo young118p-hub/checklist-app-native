@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,22 +23,26 @@ export const EditableTitle: React.FC<EditableTitleProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
+  const isSavingRef = useRef(false);
 
   const handleSave = () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+
     const trimmedTitle = editTitle.trim();
-    
+
     if (!trimmedTitle) {
+      isSavingRef.current = false;
       Alert.alert('오류', '제목을 입력해주세요.');
       return;
     }
-    
-    if (trimmedTitle === title) {
-      setIsEditing(false);
-      return;
+
+    if (trimmedTitle !== title) {
+      onSave(trimmedTitle);
     }
-    
-    onSave(trimmedTitle);
+
     setIsEditing(false);
+    setTimeout(() => { isSavingRef.current = false; }, 100);
   };
 
   const handleCancel = () => {
