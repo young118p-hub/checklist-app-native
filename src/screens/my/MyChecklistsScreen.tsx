@@ -10,18 +10,20 @@ import {
   TextInput,
   TouchableOpacity,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useChecklistStore } from '../../stores/checklistStore';
 import { ChecklistCard } from '../../components/checklist/ChecklistCard';
 import { Button } from '../../components/ui/Button';
 import { AnalyticsCard } from '../../components/ui/AnalyticsCard';
 import { RootStackParamList, Checklist } from '../../types';
+import { useTabSwitch } from '../../navigation/AppNavigator';
 
 type MyChecklistsNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const MyChecklistsScreen = () => {
   const navigation = useNavigation<MyChecklistsNavigationProp>();
+  const switchTab = useTabSwitch();
   const { 
     checklists, 
     loading, 
@@ -35,10 +37,9 @@ const MyChecklistsScreen = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'completed' | 'incomplete'>('all');
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadFromStorage();
-    }, [])
+  React.useEffect(() => {
+    loadFromStorage();
+  }, []
   );
 
   const handleRefresh = async () => {
@@ -146,12 +147,12 @@ const MyChecklistsScreen = () => {
           <View style={styles.emptyButtons}>
             <Button
               title="템플릿 보기"
-              onPress={() => navigation.navigate('Home')}
+              onPress={() => switchTab('Home')}
               style={styles.emptyButton}
             />
             <Button
               title="직접 만들기"
-              onPress={() => navigation.navigate('Create')}
+              onPress={() => switchTab('Create')}
               variant="outline"
               style={styles.emptyButton}
             />

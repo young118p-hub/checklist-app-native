@@ -22,11 +22,13 @@ import { NotificationCenter } from '../../components/ui/NotificationCenter';
 import { smartSearch } from '../../utils/smartSearch';
 import { parseSharedChecklist, validateSharedChecklistData } from '../../utils/shareUtils';
 import { RootStackParamList, SituationTemplate, SmartNotification } from '../../types';
+import { useTabSwitch } from '../../navigation/AppNavigator';
 
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const switchTab = useTabSwitch();
   const {
     createChecklist,
     loading,
@@ -74,7 +76,7 @@ const HomeScreen = () => {
         [
           {
             text: '확인',
-            onPress: () => navigation.navigate('MyChecklists'),
+            onPress: () => switchTab('MyChecklists'),
           },
         ]
       );
@@ -114,7 +116,7 @@ const HomeScreen = () => {
           }
           break;
         case 'view_my_checklists':
-          navigation.navigate('MyChecklists');
+          switchTab('MyChecklists');
           break;
         case 'browse_templates':
           setSearchTerm('');
@@ -200,7 +202,7 @@ const HomeScreen = () => {
         [
           {
             text: '확인',
-            onPress: () => navigation.navigate('MyChecklists'),
+            onPress: () => switchTab('MyChecklists'),
           },
         ]
       );

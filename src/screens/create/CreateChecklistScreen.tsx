@@ -16,6 +16,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { RootStackParamList, CreateChecklistData } from '../../types';
+import { useTabSwitch } from '../../navigation/AppNavigator';
 
 type CreateChecklistNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -29,6 +30,7 @@ interface ChecklistItemInput {
 
 const CreateChecklistScreen = () => {
   const navigation = useNavigation<CreateChecklistNavigationProp>();
+  const switchTab = useTabSwitch();
   const { createChecklist, loading } = useChecklistStore();
   
   const [formData, setFormData] = useState({
@@ -115,7 +117,7 @@ const CreateChecklistScreen = () => {
         [
           {
             text: '확인',
-            onPress: () => navigation.navigate('MyChecklists' as any),
+            onPress: () => switchTab('MyChecklists'),
           },
         ]
       );
