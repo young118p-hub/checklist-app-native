@@ -6,30 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "description": "한국 상황에 특화된 체크리스트 앱. 출장, 여행, 캠핑, 차박 등 다양한 상황별 템플릿과 AI 추천으로 깜빡할 뻔한 것들을 완벽하게 준비하세요!",
-    "privacy": "public",
+    "description": "한국 상황에 특화된 체크리스트 앱. 출장, 여행, 캠핑, 차박 등 다양한 상황별 템플릿으로 깜빡할 뻔한 것들을 완벽하게 준비하세요!",
     "platforms": [
-      "ios",
-      "android",
-      "web"
+      "android"
     ],
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#DC2626"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.checklist.amajdaigeo",
-      "buildNumber": "1",
-      "infoPlist": {
-        "CFBundleDisplayName": "아맞다이거!"
-      },
-      "icon": "./assets/icon.png"
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -41,26 +24,26 @@
         "android.permission.VIBRATE"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "name": "아맞다이거! - 체크리스트",
-      "shortName": "아맞다이거!",
-      "lang": "ko",
-      "scope": "/",
-      "themeColor": "#DC2626",
-      "backgroundColor": "#ffffff"
-    },
     "plugins": [
       "./plugins/withPageAlignment",
       [
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
-      ]
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#DC2626"
+        }
+      ],
+      "expo-font"
     ],
     "scheme": "amajdaigeo",
     "extra": {

@@ -8,8 +8,13 @@ node_modules/
 dist/
 web-build/
 
-# Native
+# Native (CNG: android/는 expo prebuild로 생성)
+/android
+/ios
 .kotlin/
+
+# 디자인 캔버스 결과물 (design/v2/*.dc.html 작업 파일에서 다시 생성)
+design/**/*-renewal.html
 *.orig.*
 *.jks
 *.p8

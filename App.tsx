@@ -106,7 +106,7 @@ export default function App() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar style="light" backgroundColor="#DC2626" />
+        <StatusBar style="light" />
         <View style={styles.loadingContent}>
           <Text style={styles.loadingTitle}>아맞다이거! 🤦‍♂️</Text>
           <Text style={styles.loadingSubtitle}>
@@ -126,7 +126,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <StatusBar style="light" backgroundColor="#DC2626" />
+        <StatusBar style="light" />
         <AppNavigator />
         <OfflineNotice />
       </ErrorBoundary>
