@@ -87,6 +87,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         peopleCount: data.peopleCount || 1,
         userId: 'local-user',
         categoryId: data.categoryId,
+        source: data.source,
         createdAt: new Date(),
         updatedAt: new Date(),
         user: { id: 'local-user', email: '', name: 'Local User' },
@@ -102,6 +103,13 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
           order: index,
           createdAt: new Date(),
           updatedAt: new Date(),
+          key: item.key,
+          section: item.section,
+          quantityPerPerson: item.quantityPerPerson,
+          scope: item.scope,
+          reason: item.reason,
+          baggage: item.baggage,
+          addedBecause: item.addedBecause,
         })),
         _count: { likes: 0, reviews: 0, comments: 0 }
       };
