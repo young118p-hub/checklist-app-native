@@ -3,17 +3,25 @@ import { Alert, View } from 'react-native';
 import { Button, Field, Sheet, T } from './ui/kit';
 import { useChecklistStore } from '../stores/checklistStore';
 import { parseImportText, sharedToChecklistData } from '../utils/shareUtils';
+import { findInviteCode } from './together';
 
-export const ImportSheet = ({ visible, onClose, onImported }: {
-  visible: boolean; onClose: () => void; onImported: (id: string) => void;
+export const ImportSheet = ({ visible, onClose, onImported, onInvite }: {
+  visible: boolean; onClose: () => void; onImported: (id: string) => void; onInvite: (code: string) => void;
 }) => {
   const createChecklist = useChecklistStore(s => s.createChecklist);
   const [text, setText] = useState('');
   const parsed = useMemo(() => parseImportText(text), [text]);
+  // 링크가 안 눌리는 메신저에서 초대 메시지를 붙여 넣은 경우
+  const inviteCode = useMemo(() => findInviteCode(text), [text]);
 
   const close = () => { setText(''); onClose(); };
 
   const submit = async () => {
+    if (inviteCode) {
+      setText('');
+      onInvite(inviteCode);
+      return;
+    }
     if (!parsed) return;
     const id = await createChecklist(sharedToChecklistData(parsed));
     if (!id) {
@@ -38,12 +46,14 @@ export const ImportSheet = ({ visible, onClose, onImported }: {
       />
       <View style={{ minHeight: 28, justifyContent: 'center', marginTop: 4 }}>
         {text.trim() !== '' && (
-          parsed
+          inviteCode
+            ? <T variant="caption" tone="accentStrong">함께 챙기기 초대예요. 눌러서 초대를 열어요</T>
+            : parsed
             ? <T variant="caption" tone="accentStrong">'{parsed.title}' · {parsed.items.length}개 항목을 가져올 수 있어요</T>
             : <T variant="caption" tone="danger">아맞다이거!에서 '앱으로 보내기'로 공유한 내용이 아니에요</T>
         )}
       </View>
-      <Button label="가져오기" disabled={!parsed} onPress={submit} style={{ marginTop: 8 }} />
+      <Button label={inviteCode ? '초대 열기' : '가져오기'} disabled={!parsed && !inviteCode} onPress={submit} style={{ marginTop: 8 }} />
     </Sheet>
   );
 };

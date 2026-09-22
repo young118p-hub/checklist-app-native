@@ -49,6 +49,30 @@ export interface GeneratedItemMeta {
   addedBecause?: string[];      // 이번 리스트에 들어간 이유 ('일본 100V · A/B타입', '5일 기준')
 }
 
+// 함께 챙기기 (서버와 동기화되는 리스트에만 있음)
+export interface Member {
+  userId: string;
+  nickname: string;
+  role: 'owner' | 'member';
+  showName: boolean;         // 내가 챙긴 항목에 이름 보이기
+  colorIndex: number;
+  memberKey?: string;        // 이름 공개를 켠 멤버와 나만 알 수 있음
+  isMe: boolean;
+}
+
+export interface ItemCheck {
+  memberKey: string;
+  checked: boolean;
+  checkedAt: string;         // ISO. 더 최근에 누른 쪽이 이김
+}
+
+export interface RemoteInfo {
+  ownerId: string;
+  myMemberKey?: string;
+  members: Member[];
+  syncedAt?: string;
+}
+
 export interface ChecklistItem extends GeneratedItemMeta {
   id: string;
   title: string;
@@ -60,6 +84,8 @@ export interface ChecklistItem extends GeneratedItemMeta {
   checklistId: string;
   createdAt: Date;
   updatedAt: Date;
+  checks?: ItemCheck[];      // 멤버별 체크 (동기화된 리스트)
+  assigneeUserId?: string;   // 같이 챙길 것의 담당
 }
 
 // 체크리스트가 어떤 템플릿/조건으로 만들어졌는지 (날짜·인원 변경 시 재계산용)
@@ -89,6 +115,7 @@ export interface Checklist {
   reminderId?: string;
   reminderAt?: string;          // ISO 시각
   cautions?: string[];          // 여행지 주의할 점 (전압, 입국 등)
+  remote?: RemoteInfo;          // 로그인해서 서버에 올라간 리스트
   createdAt: Date;
   updatedAt: Date;
   user: User;
@@ -207,4 +234,5 @@ export type RootStackParamList = {
   Main: undefined;
   ChecklistDetail: { id: string };
   Create: { templateId?: string } | undefined;
+  Invite: { code: string };
 };

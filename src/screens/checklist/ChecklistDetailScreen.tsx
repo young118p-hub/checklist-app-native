@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,10 +11,12 @@ import {
 } from '../../components/ui/kit';
 import { Badge } from '../create/CreateScreen';
 import { fonts, makeStyles, useColors } from '../../theme';
-import { Checklist, ChecklistItem, RootStackParamList } from '../../types';
+import { Checklist, ChecklistItem, Member, RootStackParamList } from '../../types';
 import { cleanText, daysUntil, formatDday, formatMeta, getProgress, getStartDate } from '../../utils/format';
-import { shareChecklist } from '../../utils/shareUtils';
 import { getReminderDate } from '../../utils/reminders';
+import { AssigneeSheet, Avatar, AvatarStack, MembersSheet, TogetherSheet, isShared, memberName } from '../../components/together';
+import { latestCheck } from '../../sync/mapping';
+import { realtime, sync } from '../../sync/engine';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 type Filter = 'all' | 'left' | 'done';
@@ -24,10 +26,19 @@ const DEFAULT_SECTION = '준비물';
 interface Section { name: string; items: ChecklistItem[]; done: number; total: number }
 
 // 섹션은 처음 나온 순서대로. 섹션 안에서는 안 챙긴 것 먼저, 챙긴 것은 아래로
+export const SHARED_GROUP = '같이 챙길 것';
+export const PERSONAL_GROUP = '각자 챙길 것';
+
+// 함께 쓰는 리스트는 '같이 챙길 것 / 각자 챙길 것'으로 나눈다 (시안 DetailShared)
+const groupKey = (item: ChecklistItem, shared: boolean) =>
+  shared ? (item.scope === 'personal' ? PERSONAL_GROUP : SHARED_GROUP) : item.section || DEFAULT_SECTION;
+
 export const groupSections = (checklist: Checklist, filter: Filter): Section[] => {
+  const shared = isShared(checklist);
   const map = new Map<string, ChecklistItem[]>();
+  if (shared) { map.set(SHARED_GROUP, []); if (checklist.items.some(i => i.scope === 'personal')) map.set(PERSONAL_GROUP, []); }
   [...checklist.items].sort((a, b) => a.order - b.order).forEach(item => {
-    const key = item.section || DEFAULT_SECTION;
+    const key = groupKey(item, shared);
     map.set(key, [...(map.get(key) ?? []), item]);
   });
   return [...map.entries()].map(([name, items]) => {
@@ -48,9 +59,11 @@ const ChecklistDetailScreen = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'ChecklistDetail'>>();
   const navigation = useNavigation<Nav>();
   const { id } = route.params;
+  // 상세 화면이 여러 개 쌓일 수 있어서(초대 링크 등) 전역 currentChecklist가 아니라 내 id로 찾는다
+  const checklist = useChecklistStore(st => st.checklists.find(c => c.id === id) ?? null);
   const {
-    currentChecklist: checklist, fetchChecklist, toggleItemComplete, addItem, updateItem, deleteItem,
-    updateChecklist, deleteChecklist, resetChecklist, setReminder, trackChecklistCompletion,
+    fetchChecklist, toggleItemComplete, addItem, updateItem, deleteItem,
+    updateChecklist, deleteChecklist, resetChecklist, setReminder, trackChecklistCompletion, setAssignee,
   } = useChecklistStore();
 
   const [filter, setFilter] = useState<Filter>('all');
@@ -63,14 +76,25 @@ const ChecklistDetailScreen = () => {
   const [renaming, setRenaming] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [cautionsOpen, setCautionsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [assigning, setAssigning] = useState<ChecklistItem | null>(null);
+  const [perPerson, setPerPerson] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  useEffect(() => { fetchChecklist(id); }, [id]);
+  // 체크·추가 같은 동작은 스토어의 currentChecklist 기준이라, 이 화면이 보일 때마다 다시 고른다
+  useFocusEffect(useCallback(() => { fetchChecklist(id); }, [id]));
+
+  // 서버에 올라간 리스트는 열어둔 동안 다른 멤버의 변경을 실시간으로 받는다
+  const synced = !!checklist?.remote;
+  useEffect(() => (synced ? realtime.watch(id) : undefined), [id, synced]);
 
   const sections = useMemo(() => (checklist ? groupSections(checklist, filter) : []), [checklist, filter]);
   const sectionNames = useMemo(() => (checklist ? groupSections(checklist, 'all').map(x => x.name) : []), [checklist]);
+  const shared = !!checklist && isShared(checklist);
+  const members = checklist?.remote?.members ?? [];
 
-  if (!checklist || checklist.id !== id) {
+  if (!checklist) {
     return (
       <View style={s.root}>
         <TopBar onBack={() => navigation.goBack()} />
@@ -115,7 +139,9 @@ const ChecklistDetailScreen = () => {
       isCompleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
-      section: section === DEFAULT_SECTION && !checklist.items.some(i => i.section) ? undefined : section,
+      ...(shared
+        ? { scope: section === PERSONAL_GROUP ? 'personal' as const : 'shared' as const }
+        : { section: section === DEFAULT_SECTION && !checklist.items.some(i => i.section) ? undefined : section }),
     });
     setNewTitle('');
     haptic.select();
@@ -133,12 +159,18 @@ const ChecklistDetailScreen = () => {
     haptic.select();
   };
 
+  const amOwner = !checklist.remote || members.find(m => m.isMe)?.role === 'owner';
   const confirmDelete = () => {
     setMenu(false);
-    Alert.alert(checklist.title, '이 리스트를 삭제할까요? 되돌릴 수 없어요.', [
+    const message = !shared
+      ? '이 리스트를 삭제할까요? 되돌릴 수 없어요.'
+      : amOwner
+        ? `함께 챙기는 ${members.length - 1}명에게서도 사라져요. 되돌릴 수 없어요.`
+        : '이 리스트에서 나갈까요? 다시 들어오려면 초대를 받아야 해요.';
+    Alert.alert(checklist.title, message, [
       { text: '취소', style: 'cancel' },
       {
-        text: '삭제', style: 'destructive', onPress: async () => {
+        text: shared && !amOwner ? '나가기' : '삭제', style: 'destructive', onPress: async () => {
           await deleteChecklist(checklist.id);
           navigation.goBack();
         },
@@ -166,13 +198,26 @@ const ChecklistDetailScreen = () => {
         onBack={() => navigation.goBack()}
         right={
           <>
-            <IconButton icon="share" label="공유" onPress={() => setSharing(true)} />
+            {shared && (
+              <Tap accessibilityRole="button" accessibilityLabel={`함께 챙기는 사람 ${members.length}명`}
+                onPress={() => setMembersOpen(true)} style={{ height: 48, paddingHorizontal: 8, justifyContent: 'center' }}>
+                <AvatarStack members={members} ring={c.bg} />
+              </Tap>
+            )}
+            <IconButton icon="share" label="함께 챙기기" onPress={() => setSharing(true)} />
             <IconButton icon="more" label="더 보기" onPress={() => setMenu(true)} />
           </>
         }
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={synced ? (
+            <RefreshControl refreshing={refreshing} tintColor={c.accent} colors={[c.accent]}
+              onRefresh={async () => { setRefreshing(true); await sync.now(); setRefreshing(false); }} />
+          ) : undefined}
+        >
           <View style={s.head}>
             {!!meta && <T size={14} tone="text3">{meta}</T>}
             <View style={s.titleRow}>
@@ -182,7 +227,9 @@ const ChecklistDetailScreen = () => {
             <ProgressBar ratio={ratio} style={{ marginTop: 16 }} />
             <View style={s.progressRow}>
               <T variant="body2" tone="text2">
-                {total === 0 ? '아래에서 첫 항목을 추가해 보세요' : done === total ? `${total}개 모두 챙겼어요` : `${total}개 중 ${done}개 챙겼어요`}
+                {total === 0 ? '아래에서 첫 항목을 추가해 보세요'
+                  : shared ? sharedSummary(checklist)
+                    : done === total ? `${total}개 모두 챙겼어요` : `${total}개 중 ${done}개 챙겼어요`}
               </T>
               {total > 0 && <T size={15} weight="semibold">{Math.round(ratio * 100)}%</T>}
             </View>
@@ -225,10 +272,33 @@ const ChecklistDetailScreen = () => {
                     <T variant="title3">{sec.name}</T>
                     <T size={14} tone="text3">{sec.done}/{sec.total}</T>
                   </View>
-                  <Icon name={isCollapsed ? 'chevronDown' : 'chevronUp'} size={20} color={c.text3} strokeWidth={2} />
+                  {sec.name === PERSONAL_GROUP ? (
+                    <View style={s.segment}>
+                      {[true, false].map(on => (
+                        <Tap key={String(on)} accessibilityRole="button" accessibilityState={{ selected: perPerson === on }}
+                          onPress={() => setPerPerson(on)} style={[s.segmentItem, perPerson === on && s.segmentOn]}>
+                          <T size={13} weight={perPerson === on ? 'semibold' : 'medium'} tone={perPerson === on ? 'text1' : 'text2'}>
+                            {on ? '1인 기준' : '전체'}
+                          </T>
+                        </Tap>
+                      ))}
+                    </View>
+                  ) : (
+                    <Icon name={isCollapsed ? 'chevronDown' : 'chevronUp'} size={20} color={c.text3} strokeWidth={2} />
+                  )}
                 </Tap>
                 {!isCollapsed && sec.items.map(item => (
-                  <ItemRow key={item.id} item={item} abroad={abroad} onPress={() => toggle(item)} onLongPress={() => { haptic.light(); setEditing(item); }} />
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    abroad={abroad}
+                    members={shared ? members : undefined}
+                    perPerson={perPerson}
+                    peopleCount={checklist.peopleCount ?? 1}
+                    onAssign={() => setAssigning(item)}
+                    onPress={() => toggle(item)}
+                    onLongPress={() => { haptic.light(); setEditing(item); }}
+                  />
                 ))}
                 {!isCollapsed && filter === 'all' && (
                   <Tap accessibilityRole="button" onPress={() => focusAdd(sec.name)} style={s.addRow}>
@@ -290,15 +360,27 @@ const ChecklistDetailScreen = () => {
           />
         )}
         {done > 0 && <SheetRow icon="refresh" label="다시 쓰기" sub="체크만 모두 풀어요" onPress={reuse} />}
-        <SheetRow icon="trash" label="리스트 삭제" danger onPress={confirmDelete} />
+        {shared && <SheetRow icon="list" label="함께 챙기는 사람" sub={`${members.length}명`} onPress={() => { setMenu(false); setMembersOpen(true); }} />}
+        <SheetRow icon="trash" label={shared && !amOwner ? '이 리스트에서 나가기' : '리스트 삭제'} danger onPress={confirmDelete} />
       </Sheet>
 
-      <Sheet visible={sharing} onClose={() => setSharing(false)} title="리스트 보내기">
-        <SheetRow icon="message" label="앱으로 보내기" sub="받은 사람이 아맞다이거!에서 바로 가져가요"
-          onPress={() => { setSharing(false); shareChecklist(checklist, 'app'); }} />
-        <SheetRow icon="doc" label="텍스트로 보내기" sub="앱이 없어도 목록을 읽을 수 있어요"
-          onPress={() => { setSharing(false); shareChecklist(checklist, 'text'); }} />
-      </Sheet>
+      <TogetherSheet visible={sharing} onClose={() => setSharing(false)} checklist={checklist} onMembers={() => setMembersOpen(true)} />
+      {checklist.remote && (
+        <MembersSheet
+          visible={membersOpen}
+          onClose={() => setMembersOpen(false)}
+          checklist={checklist}
+          onInvite={() => setSharing(true)}
+          onLeave={confirmDelete}
+        />
+      )}
+      <AssigneeSheet
+        visible={!!assigning}
+        onClose={() => setAssigning(null)}
+        members={members}
+        current={assigning?.assigneeUserId}
+        onPick={async (userId) => { if (assigning) await setAssignee(assigning.id, userId); setAssigning(null); }}
+      />
 
       <RenameSheet
         visible={renaming}
@@ -320,12 +402,39 @@ const ChecklistDetailScreen = () => {
   );
 };
 
-const ItemRow = ({ item, abroad, onPress, onLongPress }: {
-  item: ChecklistItem; abroad: boolean; onPress: () => void; onLongPress: () => void;
+const findMember = (members: Member[], key?: string) => (key ? members.find(m => m.memberKey === key) : undefined);
+
+// 함께 쓰는 리스트의 항목 아래 한 줄: 누가 챙겼는지 / 담당 / 다른 멤버 체크
+const sharedLine = (item: ChecklistItem, members: Member[]): { text?: string; avatar?: Member; assign?: boolean } => {
+  if (item.scope === 'personal') {
+    const others = (item.checks ?? [])
+      .filter(ch => ch.checked)
+      .map(ch => findMember(members, ch.memberKey))
+      .filter((m): m is Member => !!m && !m.isMe);
+    return others.length ? { text: `${others.map(memberName).join(', ')}님은 챙겼어요` } : {};
+  }
+  if (item.isCompleted) {
+    const who = findMember(members, latestCheck(item.checks ?? [])?.memberKey);
+    if (!who) return { text: '챙겼어요' };
+    return { text: who.isMe ? '내가 챙겼어요' : `${memberName(who)}님이 챙겼어요`, avatar: who };
+  }
+  const assignee = members.find(m => m.userId === item.assigneeUserId);
+  if (assignee) return { text: assignee.isMe ? '내 담당' : `${memberName(assignee)}님 담당`, avatar: assignee };
+  return { assign: true };
+};
+
+const ItemRow = ({ item, abroad, members, perPerson, peopleCount, onAssign, onPress, onLongPress }: {
+  item: ChecklistItem; abroad: boolean; members?: Member[]; perPerson: boolean; peopleCount: number;
+  onAssign: () => void; onPress: () => void; onLongPress: () => void;
 }) => {
   const s = useStyles();
-  const sub = cleanText(item.reason || item.description);
-  const showQty = (item.quantity ?? 1) > 1;
+  const c = useColors();
+  const extra = members ? sharedLine(item, members) : {};
+  const sub = extra.text ?? (item.isCompleted ? '' : cleanText(item.reason || item.description));
+  const qty = members && item.scope === 'personal' && perPerson
+    ? item.quantityPerPerson ?? Math.max(1, Math.ceil((item.quantity ?? 1) / Math.max(1, peopleCount)))
+    : item.quantity ?? 1;
+  const showQty = members && item.scope === 'personal' ? true : qty > 1;
   return (
     <Tap
       accessibilityRole="checkbox"
@@ -342,11 +451,27 @@ const ItemRow = ({ item, abroad, onPress, onLongPress }: {
           <T variant="body1" tone={item.isCompleted ? 'text3' : 'text1'} style={{ flexShrink: 1 }}>{item.title}</T>
           {abroad && item.baggage === 'carry_on' && !item.isCompleted && <Badge label="기내만" />}
         </View>
-        {!!sub && !item.isCompleted && <T variant="caption" tone="text3" numberOfLines={2}>{sub}</T>}
+        {!!sub && <T variant="caption" tone="text3" numberOfLines={2}>{sub}</T>}
       </View>
-      {showQty && <T size={15} tone="text3">{item.quantity}{item.unit || '개'}</T>}
+      {extra.avatar && <Avatar member={extra.avatar} size={28} />}
+      {extra.assign && (
+        // 항목이 많아도 시끄럽지 않게, 담당이 정해지면 아바타가 들어갈 자리에 점선 원 하나만
+        <Tap accessibilityRole="button" accessibilityLabel={`${item.title} 담당 정하기`} hitSlop={10} onPress={onAssign} style={s.assign}>
+          <Icon name="plus" size={14} color={c.text3} strokeWidth={2.2} />
+        </Tap>
+      )}
+      {showQty && !extra.assign && <T size={15} tone="text3">{qty}{item.unit || '개'}</T>}
     </Tap>
   );
+};
+
+// '같이 챙길 것 20개 중 12개 · 내 준비물 6개 중 3개'
+const sharedSummary = (checklist: Checklist) => {
+  const sharedItems = checklist.items.filter(i => i.scope !== 'personal');
+  const personal = checklist.items.filter(i => i.scope === 'personal');
+  const parts = [`같이 챙길 것 ${sharedItems.length}개 중 ${sharedItems.filter(i => i.isCompleted).length}개`];
+  if (personal.length) parts.push(`내 준비물 ${personal.length}개 중 ${personal.filter(i => i.isCompleted).length}개`);
+  return parts.join(' · ');
 };
 
 const EditItemSheet = ({ item, onClose, onSave, onDelete }: {
@@ -416,6 +541,13 @@ const useStyles = makeStyles(c => ({
   sectionHead: { height: 52, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   item: { minHeight: 56, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
   addRow: { height: 48, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  assign: {
+    width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: c.control,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  segment: { height: 44, borderRadius: 22, backgroundColor: c.fill, padding: 3, flexDirection: 'row' },
+  segmentItem: { height: 38, paddingHorizontal: 12, borderRadius: 19, justifyContent: 'center' },
+  segmentOn: { backgroundColor: c.raised },
   bottom: {
     backgroundColor: c.bg, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 12, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 8,

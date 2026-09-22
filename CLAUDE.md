@@ -43,8 +43,21 @@
 - `src/navigation/AppNavigator.tsx` - 네비게이션 (스와이프 탭 4개 홈/내 리스트/둘러보기/설정 + 스택 상세/만들기)
 - `src/screens/create/CreateScreen.tsx` - 만들기 흐름 (상황 → [나라] → 날짜 → 인원/동행자), 엔진 호출
 - `src/utils/reminders.ts` - 출발 전날 오후 8시 로컬 알림 (expo-notifications)
-- `supabase/migrations/` - 백엔드 스키마·RLS (테스트: `npm run test:db`, PGlite)
+- `supabase/migrations/` - 백엔드 스키마·RLS (테스트: `npm run test:db`, PGlite). 연결 방법은 `supabase/README.md`
+- `src/sync/` - 동기화: `client`(.env 없으면 꺼짐), `outbox`(못 보낸 변경), `merge`(서버→기기), `engine`(보내기·받기·실시간·초대)
+- `src/stores/authStore.ts` - 카카오/구글/네이버(custom:naver) OAuth, 로그아웃, 계정 삭제
+- `src/components/together.tsx` - 로그인 시트, 함께 챙기기 시트, 멤버·담당 시트
 - `plugins/withPageAlignment.js` - 16KB 페이지 대응 플러그인
+
+## 동기화 규칙
+- 기기가 원본. 로그인했을 때만 변경을 outbox에 쌓아 서버로 보냄. 혼자 쓸 때(로그인 안 함)는 아무것도 쌓이지 않음
+- 체크는 (항목 × 멤버) 한 행. 같이 챙길 것 = 가장 최근에 누른 사람, 각자 챙길 것 = 내 체크 (`deriveCompleted`)
+- 못 보낸 변경이 있는 대상은 pull 때 기기 쪽을 유지 (`mergeSnapshot`의 pendingKeys)
+- 시각 비교는 `Date.parse`로 (서버 `+00:00`, 기기 `Z` 형식이 섞임)
+- Hermes에 WebCrypto가 없어서 `client.ts`에서 expo-crypto로 채움 (PKCE S256)
+- 상세 화면은 `currentChecklist`가 아니라 route id로 리스트를 찾음 (화면이 여러 개 쌓일 수 있음)
+- 통합 테스트 `npm run test:sync`는 jest-expo가 fetch를 바꿔서 별도 설정 `jest.sync-it.config.js` 사용
+- 개발 빌드 전용 `amajdaigeo://dev-login?token=` 딥링크로 로컬 스택 테스트 계정 로그인
 
 ## Share System
 - 2가지 형식: 앱으로 보내기 (Base64 데이터 포함) / 텍스트만 보내기

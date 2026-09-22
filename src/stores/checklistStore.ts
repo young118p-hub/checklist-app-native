@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Checklist, CreateChecklistData, ChecklistItem, SmartNotification } from '../types';
+import { Checklist, CreateChecklistData, ChecklistItem, RemoteInfo, SmartNotification } from '../types';
+import { outbox } from '../sync/outbox';
+import { PENDING_ME, deriveCompleted, upsertCheck } from '../sync/mapping';
 import { generateUUID } from '../utils/uuid';
 import { SmartNotificationSystem } from '../utils/smartNotifications';
 import { cancelReminder, scheduleReminder } from '../utils/reminders';
@@ -31,6 +33,13 @@ interface ChecklistState {
   deleteChecklist: (id: string) => Promise<void>;
   
   toggleItemComplete: (itemId: string) => void;
+  setAssignee: (itemId: string, userId: string | undefined) => Promise<void>;
+
+  // 동기화 (src/sync/engine.ts에서 호출)
+  applySyncedLists: (lists: Checklist[], removedIds: string[]) => Promise<void>;
+  setRemote: (id: string, remote: Omit<RemoteInfo, 'syncedAt'>) => void;
+  adoptLocalChecks: () => void;
+  detachRemote: (myUserId: string) => Promise<void>;
   addItem: (checklistId: string, item: Omit<ChecklistItem, 'id' | 'checklistId'>) => Promise<void>;
   updateItem: (itemId: string, data: Partial<ChecklistItem>) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
@@ -130,6 +139,11 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
 
       await get().saveToStorage();
 
+      outbox.recordMany([
+        { kind: 'checklist', id: newChecklist.id },
+        ...newChecklist.items.map(i => ({ kind: 'item' as const, checklistId: newChecklist.id, id: i.id })),
+      ]);
+
       if (data.reminder && data.source?.startDate) {
         await get().setReminder(newChecklist.id, true);
       }
@@ -146,10 +160,23 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   // 다 챙긴 리스트를 다음에 다시 쓰도록 체크만 모두 푼다
   resetChecklist: async (id: string) => {
     const now = new Date();
+    const target = get().checklists.find(c => c.id === id);
+    const synced = !!target?.remote || outbox.isEnabled();
+    const myKey = target?.remote?.myMemberKey ?? PENDING_ME;
+    const at = now.toISOString();
+    if (target && synced) {
+      outbox.recordMany(target.items.filter(i => i.isCompleted)
+        .map(i => ({ kind: 'check' as const, checklistId: id, itemId: i.id, checked: false, at })));
+    }
     const reset = (c: Checklist): Checklist => ({
       ...c,
       updatedAt: now,
-      items: c.items.map(i => (i.isCompleted ? { ...i, isCompleted: false, updatedAt: now } : i)),
+      items: c.items.map(i => (i.isCompleted
+        ? {
+          ...i, isCompleted: false, updatedAt: now,
+          checks: synced ? upsertCheck(i.checks, { memberKey: myKey, checked: false, checkedAt: at }) : i.checks,
+        }
+        : i)),
     });
     set((state) => ({
       checklists: state.checklists.map(c => (c.id === id ? reset(c) : c)),
@@ -183,6 +210,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   updateChecklist: async (id: string, data: Partial<Checklist>) => {
     set({ loading: true, error: null });
     try {
+      outbox.record({ kind: 'checklist', id });
       set((state) => {
         const updatedChecklists = state.checklists.map(c => 
           c.id === id ? { ...c, ...data, updatedAt: new Date() } : c
@@ -206,6 +234,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
     try {
       const deletedChecklist = get().checklists.find(c => c.id === id);
       await cancelReminder(deletedChecklist?.reminderId);
+      const mine = !deletedChecklist?.remote || deletedChecklist.remote.members.find(m => m.isMe)?.role === 'owner';
+      outbox.record({ kind: 'checklist', id, deleted: mine ? 'delete' : 'leave' });
       const remainingChecklists = get().checklists.filter(c => c.id !== id);
 
       // 삭제되는 체크리스트의 항목 중, 다른 체크리스트에 없는 항목은 analytics에서 제거
@@ -236,9 +266,19 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
       if (!state.currentChecklist) return state;
       
       const now = new Date();
-      const updatedItems = state.currentChecklist.items.map(item =>
-        item.id === itemId ? { ...item, isCompleted: !item.isCompleted, updatedAt: now } : item
-      );
+      const list = state.currentChecklist;
+      const synced = !!list.remote || outbox.isEnabled();
+      const myKey = list.remote?.myMemberKey ?? PENDING_ME;
+      const updatedItems = list.items.map(item => {
+        if (item.id !== itemId) return item;
+        const checked = !item.isCompleted;
+        if (!synced) return { ...item, isCompleted: checked, updatedAt: now };
+        // 함께 쓰는 리스트는 내 체크를 한 줄 남기고, 완료 여부는 체크들로 다시 계산한다
+        const at = now.toISOString();
+        outbox.record({ kind: 'check', checklistId: list.id, itemId, checked, at });
+        const checks = upsertCheck(item.checks, { memberKey: myKey, checked, checkedAt: at });
+        return { ...item, checks, isCompleted: deriveCompleted({ ...item, checks }, myKey), updatedAt: now };
+      });
 
       const updatedChecklist = {
         ...state.currentChecklist,
@@ -284,6 +324,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         baggage: item.baggage,
         addedBecause: item.addedBecause,
       };
+      outbox.record({ kind: 'item', checklistId, id: newItem.id });
 
       set((state) => ({
         currentChecklist: state.currentChecklist ? {
@@ -308,6 +349,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   updateItem: async (itemId: string, data: Partial<ChecklistItem>) => {
     set({ loading: true, error: null });
     try {
+      const owner = get().checklists.find(c => c.items.some(i => i.id === itemId));
+      if (owner) outbox.record({ kind: 'item', checklistId: owner.id, id: itemId });
       set((state) => {
         const updateItemInList = (items: ChecklistItem[]) =>
           items.map(item =>
@@ -336,6 +379,8 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
   deleteItem: async (itemId: string) => {
     set({ loading: true, error: null });
     try {
+      const owner = get().checklists.find(c => c.items.some(i => i.id === itemId));
+      if (owner) outbox.record({ kind: 'item', checklistId: owner.id, id: itemId });
       set((state) => ({
         currentChecklist: state.currentChecklist ? {
           ...state.currentChecklist,
@@ -352,6 +397,69 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false });
     }
+  },
+
+  setAssignee: async (itemId: string, userId: string | undefined) => {
+    await get().updateItem(itemId, { assigneeUserId: userId });
+  },
+
+  applySyncedLists: async (lists: Checklist[], removedIds: string[]) => {
+    for (const id of removedIds) {
+      await cancelReminder(get().checklists.find(c => c.id === id)?.reminderId);
+    }
+    set((state) => ({
+      checklists: lists,
+      currentChecklist: state.currentChecklist
+        ? lists.find(c => c.id === state.currentChecklist!.id) ?? null
+        : null,
+    }));
+    await get().saveToStorage();
+  },
+
+  setRemote: (id, remote) => {
+    const apply = (c: Checklist): Checklist => (c.id === id ? { ...c, remote: { ...c.remote, ...remote } } : c);
+    set((state) => ({
+      checklists: state.checklists.map(apply),
+      currentChecklist: state.currentChecklist ? apply(state.currentChecklist) : null,
+    }));
+    get().saveToStorage();
+  },
+
+  // 로그인 직전까지 체크한 항목을 '내 체크'로 옮겨 둔다 (서버 키를 받으면 실제 키로 바뀜)
+  adoptLocalChecks: () => {
+    const adopt = (c: Checklist): Checklist => (c.remote ? c : {
+      ...c,
+      items: c.items.map(i => (i.isCompleted && !i.checks?.length
+        ? { ...i, checks: [{ memberKey: PENDING_ME, checked: true, checkedAt: new Date(i.updatedAt).toISOString() }] }
+        : i)),
+    });
+    set((state) => ({
+      checklists: state.checklists.map(adopt),
+      currentChecklist: state.currentChecklist ? adopt(state.currentChecklist) : null,
+    }));
+    get().saveToStorage();
+  },
+
+  // 로그아웃: 다른 사람이 만든 리스트는 지우고, 내 리스트는 지금 보이는 체크 상태 그대로 기기 전용으로
+  detachRemote: async (myUserId: string) => {
+    const keep: Checklist[] = [];
+    for (const c of get().checklists) {
+      if (c.remote && c.remote.ownerId !== myUserId) {
+        await cancelReminder(c.reminderId);
+        continue;
+      }
+      keep.push({
+        ...c,
+        remote: undefined,
+        userId: 'local-user',
+        items: c.items.map(({ checks: _checks, assigneeUserId: _a, ...i }) => i),
+      });
+    }
+    set((state) => ({
+      checklists: keep,
+      currentChecklist: state.currentChecklist ? keep.find(c => c.id === state.currentChecklist!.id) ?? null : null,
+    }));
+    await get().saveToStorage();
   },
 
   trackChecklistCompletion: async (checklist: Checklist) => {

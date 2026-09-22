@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, Linking, View } from 'react-native';
+import { Alert, AppState, Linking, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as SystemUI from 'expo-system-ui';
@@ -11,6 +11,9 @@ import { ErrorBoundary } from './src/components/ui/ErrorBoundary';
 import { OfflineNotice } from './src/components/ui/OfflineNotice';
 import { parseImportText, sharedToChecklistData } from './src/utils/shareUtils';
 import { configureNotifications } from './src/utils/reminders';
+import { useAuthStore } from './src/stores/authStore';
+import { sync } from './src/sync/engine';
+import { supabase } from './src/sync/client';
 import { useColors, useIsDark } from './src/theme';
 
 configureNotifications();
@@ -42,6 +45,12 @@ export default function App() {
   }, [c.bg]);
 
   const handleDeepLink = (url: string) => {
+    // 개발 빌드 전용: 로컬 Supabase 스택에서 로그인 화면 없이 테스트 계정으로 들어가기 (릴리스 빌드에서는 코드가 빠진다)
+    if (__DEV__ && url.startsWith('amajdaigeo://dev-login')) {
+      const token = new URL(url).searchParams.get('token');
+      if (token) supabase?.auth.setSession({ access_token: token, refresh_token: 'dev' }).catch(e => console.warn('dev login failed', e));
+      return;
+    }
     if (!url.includes('amajdaigeo://import-checklist')) return;
     const shared = parseImportText(url);
     if (!shared) {
@@ -63,6 +72,8 @@ export default function App() {
 
   useEffect(() => {
     Promise.all([loadFromStorage(), loadPreferences()])
+      // 기기 데이터를 먼저 읽은 다음 로그인 상태를 확인한다 (로그인돼 있으면 동기화 시작)
+      .then(() => { useAuthStore.getState().init().catch(e => console.warn('auth init failed', e)); })
       .catch(e => console.error('Failed to load initial data:', e))
       .finally(async () => {
         setReady(true);
@@ -71,6 +82,8 @@ export default function App() {
       });
 
     const linkSub = Linking.addEventListener('url', e => handleDeepLink(e.url));
+    // 앱으로 돌아올 때마다 다른 멤버의 변경을 받아온다
+    const appStateSub = AppState.addEventListener('change', state => { if (state === 'active') sync.now(); });
     // 출발 전날 알림을 누르면 그 리스트를 연다
     const notificationSub = Notifications.addNotificationResponseReceivedListener(response => {
       const id = response.notification.request.content.data?.checklistId;
@@ -78,6 +91,7 @@ export default function App() {
     });
     return () => {
       linkSub.remove();
+      appStateSub.remove();
       notificationSub.remove();
     };
   }, []);

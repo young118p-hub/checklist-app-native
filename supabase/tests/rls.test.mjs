@@ -281,3 +281,29 @@ test('로그인하지 않으면 계정 삭제를 부를 수 없다', async () =>
     await assert.rejects(q(`select public.delete_my_account()`));
   });
 });
+
+test('로그인 전에도 초대 미리보기는 볼 수 있지만 참여는 못 한다', async () => {
+  const L2 = '55555555-5555-4555-8555-555555555555';
+  let code;
+  await as(A, async () => {
+    await q(`insert into checklists (id, owner_id, title, cautions) values ($1, $2, '부산', array['주의'])`, [L2, A]);
+    [{ code }] = await q(`select public.create_invite($1) as code`, [L2]);
+  });
+  await as(null, async () => {
+    const [p] = await q(`select * from public.preview_invite($1)`, [code]);
+    assert.equal(p.title, '부산');
+    assert.equal(p.already_member, false);
+    await assert.rejects(q(`select public.accept_invite($1)`, [code]));
+  });
+});
+
+test('닉네임은 앞뒤 공백을 자르고 20자로 제한한다', async () => {
+  await as(A, async () => {
+    await q(`update profiles set nickname = '   민지  ' where id = $1`, [A]);
+    assert.equal((await q(`select nickname from profiles where id = $1`, [A]))[0].nickname, '민지');
+    await q(`update profiles set nickname = $2 where id = $1`, [A, '가'.repeat(25)]);
+    const [{ n }] = await q(`select char_length(nickname) as n from profiles where id = $1`, [A]);
+    assert.equal(n, 20);
+    await q(`update profiles set nickname = '민지' where id = $1`, [A]);
+  });
+});

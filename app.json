@@ -64,7 +64,8 @@
         {
           "color": "#F2553D"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "scheme": "amajdaigeo",
     "extra": {

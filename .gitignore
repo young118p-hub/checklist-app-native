@@ -80,3 +80,5 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+# 로컬 환경 변수 (.env.example만 커밋)
+.env

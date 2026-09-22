@@ -11,6 +11,7 @@ import BrowseScreen from '../screens/browse/BrowseScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import CreateScreen from '../screens/create/CreateScreen';
 import ChecklistDetailScreen from '../screens/checklist/ChecklistDetailScreen';
+import InviteScreen from '../screens/invite/InviteScreen';
 import { Icon, IconName } from '../components/ui/Icon';
 import { T, Tap } from '../components/ui/kit';
 import { useColors, useIsDark } from '../theme';
@@ -97,6 +98,7 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Main: 'home',
       ChecklistDetail: 'checklist/:id',
+      Invite: 'invite/:code',
     },
   },
 };
@@ -116,6 +118,7 @@ export const AppNavigator = ({ onReady }: { onReady?: () => void }) => {
         <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen name="ChecklistDetail" component={ChecklistDetailScreen} />
         <Stack.Screen name="Create" component={CreateScreen} options={{ ...TransitionPresets.ModalSlideFromBottomIOS }} />
+        <Stack.Screen name="Invite" component={InviteScreen} options={{ ...TransitionPresets.ModalSlideFromBottomIOS }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
