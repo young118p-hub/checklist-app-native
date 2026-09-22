@@ -1,5 +1,5 @@
 import { Share, Alert } from 'react-native';
-import { Checklist } from '../types';
+import { Checklist, ChecklistSource, CreateChecklistData } from '../types';
 
 export const PLAY_STORE_LINK = 'https://play.google.com/store/apps/details?id=com.checklist.amajdaigeo';
 
@@ -13,7 +13,16 @@ export interface SharedChecklistData {
     quantity?: number;
     unit?: string;
     order: number;
+    // v2에서 추가 (없어도 됨 — 예전 버전 앱이 보낸 데이터와 호환)
+    section?: string;
+    scope?: 'shared' | 'personal';
+    reason?: string;
+    baggage?: 'carry_on' | 'checked';
   }[];
+  peopleCount?: number;
+  categoryId?: string;
+  source?: ChecklistSource;
+  cautions?: string[];
   sharedAt: string;
   sharedBy: string;
   originalId: string;
@@ -30,7 +39,15 @@ export const createShareableData = (checklist: Checklist): SharedChecklistData =
       quantity: item.quantity,
       unit: item.unit,
       order: item.order,
+      section: item.section,
+      scope: item.scope,
+      reason: item.reason,
+      baggage: item.baggage,
     })),
+    peopleCount: checklist.peopleCount,
+    categoryId: checklist.categoryId,
+    source: checklist.source,
+    cautions: checklist.cautions,
     sharedAt: new Date().toISOString(),
     sharedBy: '아맞다이거! 사용자',
     originalId: checklist.id,
@@ -227,6 +244,25 @@ export const parseSharedChecklist = (sharedData: string): SharedChecklistData | 
   }
 };
 
+const optionalString = (value: unknown, max: number) =>
+  value === undefined || (typeof value === 'string' && value.length <= max);
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const optionalDate = (value: unknown) => value === undefined || (typeof value === 'string' && ISO_DATE.test(value));
+
+const isValidSource = (source: any): source is ChecklistSource =>
+  source && typeof source === 'object' &&
+  (source.kind === 'situation' || source.kind === 'destination') &&
+  optionalString(source.templateId, 60) &&
+  optionalString(source.destinationId, 60) &&
+  optionalDate(source.startDate) && optionalDate(source.endDate) &&
+  Number.isInteger(source.peopleCount) && source.peopleCount >= 1 && source.peopleCount <= 100 &&
+  Number.isInteger(source.engineVersion) &&
+  (source.situationIds === undefined || (Array.isArray(source.situationIds) && source.situationIds.length <= 10 &&
+    source.situationIds.every((id: unknown) => typeof id === 'string' && id.length <= 60))) &&
+  (source.companions === undefined || (Array.isArray(source.companions) &&
+    source.companions.every((c: unknown) => c === 'baby' || c === 'kid' || c === 'senior' || c === 'pet')));
+
 export const validateSharedChecklistData = (data: any): data is SharedChecklistData => {
   return (
     data &&
@@ -240,10 +276,51 @@ export const validateSharedChecklistData = (data: any): data is SharedChecklistD
       typeof item.order === 'number' && Number.isFinite(item.order) &&
       (item.description === undefined || (typeof item.description === 'string' && item.description.length <= MAX_DESCRIPTION_LENGTH)) &&
       (item.quantity === undefined || (typeof item.quantity === 'number' && Number.isFinite(item.quantity) && item.quantity >= 0 && item.quantity <= MAX_QUANTITY)) &&
-      (item.unit === undefined || (typeof item.unit === 'string' && item.unit.length <= 20))
+      (item.unit === undefined || (typeof item.unit === 'string' && item.unit.length <= 20)) &&
+      optionalString(item.section, 40) &&
+      optionalString(item.reason, MAX_DESCRIPTION_LENGTH) &&
+      (item.scope === undefined || item.scope === 'shared' || item.scope === 'personal') &&
+      (item.baggage === undefined || item.baggage === 'carry_on' || item.baggage === 'checked')
     ) &&
+    (data.peopleCount === undefined || (Number.isInteger(data.peopleCount) && data.peopleCount >= 1 && data.peopleCount <= 100)) &&
+    optionalString(data.categoryId, 40) &&
+    (data.source === undefined || isValidSource(data.source)) &&
+    (data.cautions === undefined || (Array.isArray(data.cautions) && data.cautions.length <= 20 &&
+      data.cautions.every((c: unknown) => typeof c === 'string' && c.length <= MAX_DESCRIPTION_LENGTH))) &&
     typeof data.sharedAt === 'string' && data.sharedAt.length <= 50 &&
     typeof data.sharedBy === 'string' && data.sharedBy.length <= MAX_STRING_FIELD_LENGTH &&
     typeof data.originalId === 'string' && data.originalId.length <= MAX_STRING_FIELD_LENGTH
   );
+};
+
+export const sharedToChecklistData = (shared: SharedChecklistData): CreateChecklistData => ({
+  title: shared.title,
+  description: shared.description || `${shared.sharedBy}님이 공유한 리스트`,
+  isTemplate: false,
+  isPublic: false,
+  peopleCount: shared.peopleCount ?? 1,
+  categoryId: shared.categoryId,
+  source: shared.source,
+  cautions: shared.cautions,
+  items: shared.items.map(item => ({
+    title: item.title,
+    description: item.description || '',
+    quantity: item.quantity || 1,
+    unit: item.unit || '',
+    order: item.order,
+    section: item.section,
+    scope: item.scope,
+    reason: item.reason,
+    baggage: item.baggage,
+  })),
+});
+
+export const parseImportText = (text: string): SharedChecklistData | null => {
+  if (!text.trim()) return null;
+  try {
+    const data = parseSharedChecklist(text.trim());
+    return data && validateSharedChecklistData(data) ? data : null;
+  } catch {
+    return null;
+  }
 };

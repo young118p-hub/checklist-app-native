@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Checklist, CreateChecklistData, ChecklistItem, SmartNotification } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { SmartNotificationSystem } from '../utils/smartNotifications';
+import { cancelReminder, scheduleReminder } from '../utils/reminders';
 
 interface ItemAnalytics {
   title: string;
@@ -23,7 +24,9 @@ interface ChecklistState {
   // Actions
   fetchChecklists: () => Promise<void>;
   fetchChecklist: (id: string) => Promise<void>;
-  createChecklist: (data: CreateChecklistData) => Promise<void>;
+  createChecklist: (data: CreateChecklistData) => Promise<string | undefined>;
+  resetChecklist: (id: string) => Promise<void>;
+  setReminder: (id: string, on: boolean) => Promise<boolean>;
   updateChecklist: (id: string, data: Partial<Checklist>) => Promise<void>;
   deleteChecklist: (id: string) => Promise<void>;
   
@@ -88,6 +91,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         userId: 'local-user',
         categoryId: data.categoryId,
         source: data.source,
+        cautions: data.cautions && data.cautions.length > 0 ? data.cautions : undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
         user: { id: 'local-user', email: '', name: 'Local User' },
@@ -125,12 +129,55 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
       }));
 
       await get().saveToStorage();
-      
+
+      if (data.reminder && data.source?.startDate) {
+        await get().setReminder(newChecklist.id, true);
+      }
+
       // 스마트 알림 생성 (체크리스트 생성 후)
       await get().generateSmartNotifications(newChecklist);
+      return newChecklist.id;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false });
+      return undefined;
     }
+  },
+
+  // 다 챙긴 리스트를 다음에 다시 쓰도록 체크만 모두 푼다
+  resetChecklist: async (id: string) => {
+    const now = new Date();
+    const reset = (c: Checklist): Checklist => ({
+      ...c,
+      updatedAt: now,
+      items: c.items.map(i => (i.isCompleted ? { ...i, isCompleted: false, updatedAt: now } : i)),
+    });
+    set((state) => ({
+      checklists: state.checklists.map(c => (c.id === id ? reset(c) : c)),
+      currentChecklist: state.currentChecklist?.id === id ? reset(state.currentChecklist) : state.currentChecklist,
+    }));
+    await get().saveToStorage();
+  },
+
+  // 출발 전날 오후 8시 알림 켜기/끄기. 켜지지 않으면(권한 거절, 이미 지난 날짜) false
+  setReminder: async (id: string, on: boolean) => {
+    const checklist = get().checklists.find(c => c.id === id);
+    if (!checklist) return false;
+    await cancelReminder(checklist.reminderId);
+    let next: { reminderId?: string; reminderAt?: string } = { reminderId: undefined, reminderAt: undefined };
+    const startDate = checklist.source?.startDate;
+    if (on && startDate) {
+      const scheduled = await scheduleReminder(checklist, startDate).catch(e => {
+        console.error('Failed to schedule reminder:', e);
+        return null;
+      });
+      if (scheduled) next = { reminderId: scheduled.id, reminderAt: scheduled.at };
+    }
+    set((state) => ({
+      checklists: state.checklists.map(c => (c.id === id ? { ...c, ...next } : c)),
+      currentChecklist: state.currentChecklist?.id === id ? { ...state.currentChecklist, ...next } : state.currentChecklist,
+    }));
+    await get().saveToStorage();
+    return !!next.reminderId;
   },
 
   updateChecklist: async (id: string, data: Partial<Checklist>) => {
@@ -158,6 +205,7 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const deletedChecklist = get().checklists.find(c => c.id === id);
+      await cancelReminder(deletedChecklist?.reminderId);
       const remainingChecklists = get().checklists.filter(c => c.id !== id);
 
       // 삭제되는 체크리스트의 항목 중, 다른 체크리스트에 없는 항목은 analytics에서 제거
@@ -187,12 +235,14 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
     set((state) => {
       if (!state.currentChecklist) return state;
       
+      const now = new Date();
       const updatedItems = state.currentChecklist.items.map(item =>
-        item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
+        item.id === itemId ? { ...item, isCompleted: !item.isCompleted, updatedAt: now } : item
       );
-      
+
       const updatedChecklist = {
         ...state.currentChecklist,
+        updatedAt: now,
         items: updatedItems
       };
 
@@ -226,6 +276,13 @@ export const useChecklistStore = create<ChecklistState>((set, get) => ({
         order: item.order || 0,
         createdAt: new Date(),
         updatedAt: new Date(),
+        key: item.key,
+        section: item.section,
+        quantityPerPerson: item.quantityPerPerson,
+        scope: item.scope,
+        reason: item.reason,
+        baggage: item.baggage,
+        addedBecause: item.addedBecause,
       };
 
       set((state) => ({

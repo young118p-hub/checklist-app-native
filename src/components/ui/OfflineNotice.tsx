@@ -1,72 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { T } from './kit';
+import { useColors } from '../../theme';
 
-export const OfflineNotice: React.FC = () => {
-  const [isOffline, setIsOffline] = useState(false);
-  const slideAnim = new Animated.Value(-50);
+// 혼자 쓸 때는 모든 데이터가 기기에 저장되므로 안내만 한다
+export const OfflineNotice = () => {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  const [offline, setOffline] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      const offline = !state.isConnected;
-      setIsOffline(offline);
+  useEffect(() => NetInfo.addEventListener(state => setOffline(state.isConnected === false)), []);
 
-      if (offline) {
-        // 오프라인일 때 슬라이드 다운
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 50,
-          friction: 8,
-        }).start();
-      } else {
-        // 온라인일 때 슬라이드 업
-        Animated.timing(slideAnim, {
-          toValue: -50,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  if (!isOffline) {
-    return null;
-  }
-
+  if (!offline) return null;
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      <Text style={styles.text}>
-        🔌 오프라인 모드 - 모든 데이터는 로컬에 저장됩니다
-      </Text>
-    </Animated.View>
+    <View pointerEvents="none" style={{ position: 'absolute', top: insets.top + 8, left: 0, right: 0, alignItems: 'center' }}>
+      <View style={{ backgroundColor: c.chipOn, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 }}>
+        <T size={13} weight="medium" tone="onChipOn">오프라인이에요 · 기기에 그대로 저장돼요</T>
+      </View>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#F59E0B',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    zIndex: 1000,
-  },
-  text: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-});

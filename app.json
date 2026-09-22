@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "description": "한국 상황에 특화된 체크리스트 앱. 출장, 여행, 캠핑, 차박 등 다양한 상황별 템플릿으로 깜빡할 뻔한 것들을 완벽하게 준비하세요!",
     "platforms": [
       "android"
@@ -43,7 +43,23 @@
           "backgroundColor": "#DC2626"
         }
       ],
-      "expo-font"
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Pretendard-Regular.otf",
+            "./assets/fonts/Pretendard-Medium.otf",
+            "./assets/fonts/Pretendard-SemiBold.otf",
+            "./assets/fonts/Pretendard-Bold.otf"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F2553D"
+        }
+      ]
     ],
     "scheme": "amajdaigeo",
     "extra": {

@@ -14,6 +14,7 @@
 - Plugin: `plugins/withPageAlignment.js` - ABI 필터 + gradle.properties 설정
 - CNG 방식: `android/`는 `expo prebuild`로 생성하고 커밋하지 않음 (.gitignore)
 - 로컬 빌드 확인: `npx expo prebuild --platform android --clean` 후 `cd android && ./gradlew assembleDebug` (JDK 17)
+- 에뮬레이터 실행: `npx expo run:android --no-bundler` + `npx expo start --dev-client` (**`CI=1`로 띄우지 말 것** — 파일 감시가 꺼져 수정이 반영 안 됨), `adb reverse tcp:8081 tcp:8081`
 
 ### app.json plugins
 ```json
@@ -21,23 +22,33 @@
   "./plugins/withPageAlignment",
   ["expo-build-properties", { "android": { "compileSdkVersion": 36, "targetSdkVersion": 36 } }],
   ["expo-splash-screen", { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#DC2626" }],
-  "expo-font"
+  ["expo-font", { "fonts": ["./assets/fonts/Pretendard-*.otf (Regular/Medium/SemiBold/Bold)"] }],
+  ["expo-notifications", { "color": "#F2553D" }]
 ]
+// userInterfaceStyle: "automatic" (다크모드), 설정 탭에서 기기/밝게/어둡게 선택
 ```
 
 ## v2 디자인
 - 시안 작업 파일: `design/v2/*.dc.html` + `canvas.json`
 - 포인트 컬러 코랄 #F2553D 한 가지, 나머지 무채색. 이모지 대신 단색 라인 아이콘
+- 앱 코드: 토큰 `src/theme/tokens.ts`(라이트/다크), 공통 부품 `src/components/ui/kit.tsx`, 아이콘 `src/components/ui/Icon.tsx`(시안 SVG 그대로)
+- 색은 하드코딩하지 말고 `makeStyles(c => ...)` / `useColors()`로. 빨강(danger)은 삭제에만
+- 폰트 Pretendard 4굵기 번들(`assets/fonts`, OFL). Android는 fontWeight가 안 먹어서 `fonts.bold` 같은 fontFamily로 굵기 지정
+- 템플릿 문구의 이모지는 데이터는 두고 화면에서 `cleanText()`로 걷어냄
 
 ## Key Files
 - `src/constants/templates.ts` - 템플릿 정의 + calculateQuantity() 수량 계산
 - `src/utils/shareUtils.ts` - 공유 시스템 (#CHECKLIST_DATA# 마커 형식)
 - `src/stores/checklistStore.ts` - Zustand 스토어
-- `src/navigation/AppNavigator.tsx` - 네비게이션 (탭 + 스택)
+- `src/navigation/AppNavigator.tsx` - 네비게이션 (스와이프 탭 4개 홈/내 리스트/둘러보기/설정 + 스택 상세/만들기)
+- `src/screens/create/CreateScreen.tsx` - 만들기 흐름 (상황 → [나라] → 날짜 → 인원/동행자), 엔진 호출
+- `src/utils/reminders.ts` - 출발 전날 오후 8시 로컬 알림 (expo-notifications)
+- `supabase/migrations/` - 백엔드 스키마·RLS (테스트: `npm run test:db`, PGlite)
 - `plugins/withPageAlignment.js` - 16KB 페이지 대응 플러그인
 
 ## Share System
 - 2가지 형식: 앱으로 보내기 (Base64 데이터 포함) / 텍스트만 보내기
+- v2 필드(section·reason·baggage·source·cautions)는 전부 선택값 — 예전 앱이 보낸 데이터도 받아야 함 (`shareUtils.test.ts`)
 - #CHECKLIST_DATA#...#END# 마커로 체크리스트 데이터 임베딩
 - Play Store 링크 포함
 

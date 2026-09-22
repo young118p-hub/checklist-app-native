@@ -85,6 +85,10 @@ export interface Checklist {
   userId: string;
   categoryId?: string;
   source?: ChecklistSource;
+  // 출발 전날 오후 8시 알림 (예약된 로컬 알림 id)
+  reminderId?: string;
+  reminderAt?: string;          // ISO 시각
+  cautions?: string[];          // 여행지 주의할 점 (전압, 입국 등)
   createdAt: Date;
   updatedAt: Date;
   user: User;
@@ -112,6 +116,8 @@ export interface CreateChecklistData {
   peopleCount?: number;
   categoryId?: string;
   source?: ChecklistSource;
+  reminder?: boolean;           // 날짜가 있으면 출발 전날 오후 8시 알림
+  cautions?: string[];
   items: ({
     title: string;
     description?: string;
@@ -200,13 +206,5 @@ export interface Destination {
 export type RootStackParamList = {
   Main: undefined;
   ChecklistDetail: { id: string };
-  Home: undefined;
-  MyChecklists: undefined;
-  Create: undefined;
-};
-
-export type BottomTabParamList = {
-  Home: undefined;
-  MyChecklists: undefined;
-  Create: undefined;
+  Create: { templateId?: string } | undefined;
 };

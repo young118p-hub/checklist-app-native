@@ -1,170 +1,98 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, View, Text, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppNavigator } from './src/navigation/AppNavigator';
+import * as Notifications from 'expo-notifications';
+import * as SystemUI from 'expo-system-ui';
+import { AppNavigator, navigationRef } from './src/navigation/AppNavigator';
 import { useChecklistStore } from './src/stores/checklistStore';
+import { usePreferencesStore } from './src/stores/preferencesStore';
 import { ErrorBoundary } from './src/components/ui/ErrorBoundary';
 import { OfflineNotice } from './src/components/ui/OfflineNotice';
-import { parseSharedChecklist, validateSharedChecklistData } from './src/utils/shareUtils';
+import { parseImportText, sharedToChecklistData } from './src/utils/shareUtils';
+import { configureNotifications } from './src/utils/reminders';
+import { useColors, useIsDark } from './src/theme';
+
+configureNotifications();
+
+const openChecklist = (id: string) => {
+  if (navigationRef.isReady()) navigationRef.navigate('ChecklistDetail', { id });
+};
+
+// 앱이 꺼져 있을 때 알림을 눌러 켰으면 화면이 준비된 뒤에 연다
+const openFromLastNotification = async () => {
+  const response = await Notifications.getLastNotificationResponseAsync().catch(() => null);
+  const id = response?.notification.request.content.data?.checklistId;
+  if (typeof id === 'string') {
+    openChecklist(id);
+    Notifications.clearLastNotificationResponseAsync?.().catch(() => {});
+  }
+};
 
 export default function App() {
-  const { loadFromStorage, createChecklist } = useChecklistStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const loadFromStorage = useChecklistStore(s => s.loadFromStorage);
+  const createChecklist = useChecklistStore(s => s.createChecklist);
+  const loadPreferences = usePreferencesStore(s => s.load);
+  const [ready, setReady] = useState(false);
+  const dark = useIsDark();
+  const c = useColors();
 
-  const handleDeepLink = async (url: string) => {
-    try {
-      // Handle import checklist deep link
-      if (url.includes('amajdaigeo://import-checklist')) {
-        const sharedData = parseSharedChecklist(url);
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(c.bg).catch(() => {});
+  }, [c.bg]);
 
-        if (!sharedData || !validateSharedChecklistData(sharedData)) {
-          Alert.alert('오류', '올바른 공유 링크가 아닙니다.');
-          return;
-        }
-
-        Alert.alert(
-          '공유받은 체크리스트',
-          `"${sharedData.title}"를 내 체크리스트에 추가하시겠습니까?`,
-          [
-            { text: '취소', style: 'cancel' },
-            {
-              text: '추가',
-              onPress: async () => {
-                try {
-                  const checklistData = {
-                    title: `${sharedData.title} (공유받음)`,
-                    description: sharedData.description || `${sharedData.sharedBy}님이 공유한 체크리스트`,
-                    isTemplate: false,
-                    isPublic: false,
-                    peopleCount: 1,
-                    categoryId: undefined,
-                    items: sharedData.items.map((item) => ({
-                      title: item.title,
-                      description: item.description || '',
-                      quantity: item.quantity || 1,
-                      unit: item.unit || '',
-                      order: item.order
-                    }))
-                  };
-
-                  await createChecklist(checklistData);
-                  Alert.alert('성공! 🎉', '공유받은 체크리스트가 추가되었습니다.');
-                } catch (error) {
-                  Alert.alert('오류', '체크리스트 추가에 실패했습니다.');
-                }
-              }
-            }
-          ]
-        );
-      }
-    } catch (error) {
-      console.error('Deep link handling error:', error);
-      Alert.alert('오류', '링크 처리에 실패했습니다.');
+  const handleDeepLink = (url: string) => {
+    if (!url.includes('amajdaigeo://import-checklist')) return;
+    const shared = parseImportText(url);
+    if (!shared) {
+      Alert.alert('가져올 수 없는 링크예요', '아맞다이거!에서 공유한 링크인지 확인해 주세요.');
+      return;
     }
+    Alert.alert('공유받은 리스트', `'${shared.title}'(${shared.items.length}개 항목)을 내 리스트에 추가할까요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '추가',
+        onPress: async () => {
+          const id = await createChecklist(sharedToChecklistData(shared));
+          if (id) openChecklist(id);
+          else Alert.alert('가져오지 못했어요', '잠시 후 다시 시도해 주세요.');
+        },
+      },
+    ]);
   };
 
   useEffect(() => {
-    // Load data from AsyncStorage on app start
-    const initializeApp = async () => {
-      try {
-        await loadFromStorage();
-        // 최소 1초 로딩 화면 표시 (너무 빨리 사라지는 것 방지)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error('Failed to load initial data:', error);
-        // 초기 로딩 실패 시에도 앱이 동작하도록 처리
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    Promise.all([loadFromStorage(), loadPreferences()])
+      .catch(e => console.error('Failed to load initial data:', e))
+      .finally(async () => {
+        setReady(true);
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) handleDeepLink(initialUrl);
+      });
 
-    // Handle deep links when app is already running
-    const handleUrl = (event: { url: string }) => {
-      handleDeepLink(event.url);
-    };
-
-    // Handle deep links when app is opened from a deep link
-    const getInitialUrl = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        handleDeepLink(initialUrl);
-      }
-    };
-
-    // Await initialization before processing deep links to prevent data loss
-    initializeApp().then(() => {
-      getInitialUrl();
+    const linkSub = Linking.addEventListener('url', e => handleDeepLink(e.url));
+    // 출발 전날 알림을 누르면 그 리스트를 연다
+    const notificationSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const id = response.notification.request.content.data?.checklistId;
+      if (typeof id === 'string') openChecklist(id);
     });
-
-    // Add event listener for deep links (while app is already running)
-    const subscription = Linking.addEventListener('url', handleUrl);
-
-    return () => subscription?.remove();
+    return () => {
+      linkSub.remove();
+      notificationSub.remove();
+    };
   }, []);
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <StatusBar style="light" />
-        <View style={styles.loadingContent}>
-          <Text style={styles.loadingTitle}>아맞다이거! 🤦‍♂️</Text>
-          <Text style={styles.loadingSubtitle}>
-            깜빡할 뻔한 모든 것들을 한 번에!
-          </Text>
-          <ActivityIndicator
-            size="large"
-            color="white"
-            style={styles.loadingSpinner}
-          />
-          <Text style={styles.loadingText}>준비 중...</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <StatusBar style="light" />
-        <AppNavigator />
-        <OfflineNotice />
-      </ErrorBoundary>
+      <StatusBar style={dark ? 'light' : 'dark'} />
+      {ready ? (
+        <ErrorBoundary>
+          <AppNavigator onReady={openFromLastNotification} />
+          <OfflineNotice />
+        </ErrorBoundary>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: c.bg }} />
+      )}
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#DC2626',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingContent: {
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loadingTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  loadingSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 24,
-  },
-  loadingSpinner: {
-    marginBottom: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-  },
-});

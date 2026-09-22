@@ -1,734 +1,436 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  Alert,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  Vibration,
-} from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useChecklistStore } from '../../stores/checklistStore';
-import { ChecklistItemComponent } from '../../components/checklist/ChecklistItem';
-import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { EditableTitle } from '../../components/ui/EditableTitle';
-import { CelebrationModal } from '../../components/ui/CelebrationModal';
-import { SmartRecommendations } from '../../components/ui/SmartRecommendations';
-import { EnhancedShareModal } from '../../components/ui/EnhancedShareModal';
-import { RootStackParamList, ChecklistItem } from '../../types';
+import { Icon } from '../../components/ui/Icon';
+import {
+  Button, Checkbox, Chip, ChipRow, Field, IconButton, ProgressBar, Sheet, SheetRow, T, Tap, TopBar, haptic,
+} from '../../components/ui/kit';
+import { Badge } from '../create/CreateScreen';
+import { fonts, makeStyles, useColors } from '../../theme';
+import { Checklist, ChecklistItem, RootStackParamList } from '../../types';
+import { cleanText, daysUntil, formatDday, formatMeta, getProgress, getStartDate } from '../../utils/format';
+import { shareChecklist } from '../../utils/shareUtils';
+import { getReminderDate } from '../../utils/reminders';
 
-type ChecklistDetailRouteProp = RouteProp<RootStackParamList, 'ChecklistDetail'>;
-type ChecklistDetailNavigationProp = StackNavigationProp<RootStackParamList>;
+type Nav = StackNavigationProp<RootStackParamList>;
+type Filter = 'all' | 'left' | 'done';
+
+const DEFAULT_SECTION = '준비물';
+
+interface Section { name: string; items: ChecklistItem[]; done: number; total: number }
+
+// 섹션은 처음 나온 순서대로. 섹션 안에서는 안 챙긴 것 먼저, 챙긴 것은 아래로
+export const groupSections = (checklist: Checklist, filter: Filter): Section[] => {
+  const map = new Map<string, ChecklistItem[]>();
+  [...checklist.items].sort((a, b) => a.order - b.order).forEach(item => {
+    const key = item.section || DEFAULT_SECTION;
+    map.set(key, [...(map.get(key) ?? []), item]);
+  });
+  return [...map.entries()].map(([name, items]) => {
+    const visible = items.filter(i => (filter === 'left' ? !i.isCompleted : filter === 'done' ? i.isCompleted : true));
+    return {
+      name,
+      items: [...visible.filter(i => !i.isCompleted), ...visible.filter(i => i.isCompleted)],
+      done: items.filter(i => i.isCompleted).length,
+      total: items.length,
+    };
+  });
+};
 
 const ChecklistDetailScreen = () => {
-  const route = useRoute<ChecklistDetailRouteProp>();
-  const navigation = useNavigation<ChecklistDetailNavigationProp>();
+  const s = useStyles();
+  const c = useColors();
   const insets = useSafeAreaInsets();
+  const route = useRoute<RouteProp<RootStackParamList, 'ChecklistDetail'>>();
+  const navigation = useNavigation<Nav>();
   const { id } = route.params;
-
   const {
-    currentChecklist,
-    loading,
-    error,
-    fetchChecklist,
-    toggleItemComplete,
-    deleteChecklist,
-    updateChecklist,
-    addItem,
-    deleteItem,
-    updateItem,
-    trackChecklistCompletion
+    currentChecklist: checklist, fetchChecklist, toggleItemComplete, addItem, updateItem, deleteItem,
+    updateChecklist, deleteChecklist, resetChecklist, setReminder, trackChecklistCompletion,
   } = useChecklistStore();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [previousCompletionRate, setPreviousCompletionRate] = useState(-1);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newItemTitle, setNewItemTitle] = useState('');
-  const [newItemDescription, setNewItemDescription] = useState('');
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [newTitle, setNewTitle] = useState('');
+  const [targetSection, setTargetSection] = useState<string | undefined>();
+  const [editing, setEditing] = useState<ChecklistItem | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [cautionsOpen, setCautionsOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
-  useEffect(() => {
-    fetchChecklist(id);
-  }, [id]);
+  useEffect(() => { fetchChecklist(id); }, [id]);
 
-  useEffect(() => {
-    if (currentChecklist) {
-      navigation.setOptions({
-        title: currentChecklist.title,
-      });
-      // 처음 로드 시 현재 완료율로 초기화 (잘못된 축하 모달 방지)
-      if (previousCompletionRate === -1) {
-        const completed = currentChecklist.items.filter(i => i.isCompleted).length;
-        const total = currentChecklist.items.length;
-        setPreviousCompletionRate(total > 0 ? Math.round((completed / total) * 100) : 0);
-      }
-    }
-  }, [currentChecklist, navigation]);
+  const sections = useMemo(() => (checklist ? groupSections(checklist, filter) : []), [checklist, filter]);
+  const sectionNames = useMemo(() => (checklist ? groupSections(checklist, 'all').map(x => x.name) : []), [checklist]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchChecklist(id);
-    setRefreshing(false);
-  };
+  if (!checklist || checklist.id !== id) {
+    return (
+      <View style={s.root}>
+        <TopBar onBack={() => navigation.goBack()} />
+        <View style={s.center}>
+          <T variant="title3">리스트를 찾을 수 없어요</T>
+          <T variant="body2" tone="text2">삭제됐거나 아직 불러오는 중이에요</T>
+        </View>
+      </View>
+    );
+  }
 
-  const handleShare = () => {
-    if (!currentChecklist) return;
-    setShowShareModal(true);
-  };
+  const { total, done, ratio } = getProgress(checklist);
+  const left = total - done;
+  const start = getStartDate(checklist);
+  const days = start ? daysUntil(start) : undefined;
+  const meta = formatMeta(checklist);
+  const abroad = checklist.source?.kind === 'destination' && checklist.source.destinationId !== 'korea';
+  const section = targetSection && sectionNames.includes(targetSection) ? targetSection : sectionNames[0] ?? DEFAULT_SECTION;
 
-  const handleTitleSave = async (newTitle: string) => {
-    if (!currentChecklist) return;
-    
-    try {
-      await updateChecklist(currentChecklist.id, { title: newTitle });
-      navigation.setOptions({ title: newTitle });
-    } catch (error) {
-      Alert.alert('오류', '제목 변경에 실패했습니다.');
+  const toggle = (item: ChecklistItem) => {
+    const willComplete = !item.isCompleted;
+    haptic.light();
+    toggleItemComplete(item.id);
+    if (willComplete && done + 1 === total) {
+      haptic.success();
+      const updated = useChecklistStore.getState().currentChecklist;
+      if (updated) trackChecklistCompletion(updated);
+      setTimeout(() => setCompleted(true), 350);
     }
   };
 
-  const handleEditItem = (itemId: string) => {
-    const item = currentChecklist?.items.find(i => i.id === itemId);
-    if (!item) return;
-    Vibration.vibrate(50);
-    setEditingItem(item);
-    setEditTitle(item.title);
-    setEditDescription(item.description || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingItem) return;
-    const trimmed = editTitle.trim();
-    if (!trimmed) {
-      Alert.alert('알림', '항목 이름을 입력해주세요.');
-      return;
-    }
-    await updateItem(editingItem.id, {
-      title: trimmed,
-      description: editDescription.trim() || undefined,
+  const add = async () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    const maxOrder = checklist.items.reduce((m, i) => Math.max(m, i.order), -1);
+    await addItem(checklist.id, {
+      title,
+      description: '',
+      quantity: 1,
+      unit: '',
+      order: maxOrder + 1,
+      isCompleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      section: section === DEFAULT_SECTION && !checklist.items.some(i => i.section) ? undefined : section,
     });
-    setEditingItem(null);
+    setNewTitle('');
+    haptic.select();
   };
 
-  const handleItemToggle = async (itemId: string) => {
-    if (!currentChecklist) return;
-
-    const item = currentChecklist.items.find(i => i.id === itemId);
-    if (!item) return;
-
-    const totalItems = currentChecklist.items.length;
-    // Compute expected count based on current state + toggle direction
-    const oldCompletedCount = currentChecklist.items.filter(i => i.isCompleted).length;
-    const newCompletedCount = item.isCompleted
-      ? oldCompletedCount - 1  // unchecking
-      : oldCompletedCount + 1; // checking
-
-    toggleItemComplete(itemId);
-
-    const completionRate = Math.round((newCompletedCount / totalItems) * 100);
-
-    // 완료율이 증가했고, 특정 threshold를 처음 넘었을 때만 축하 모달 표시
-    if (newCompletedCount > oldCompletedCount && (
-      (completionRate === 100 && previousCompletionRate < 100) ||
-      (completionRate >= 80 && previousCompletionRate < 80) ||
-      (completionRate >= 50 && previousCompletionRate < 50)
-    )) {
-      setTimeout(() => setShowCelebration(true), 300);
-
-      // 100% 완료 시 analytics 기록
-      if (completionRate === 100) {
-        const updatedChecklist = useChecklistStore.getState().currentChecklist;
-        if (updatedChecklist) {
-          trackChecklistCompletion(updatedChecklist);
-        }
-      }
-    }
-
-    // Only update previousCompletionRate when increasing to prevent re-triggering
-    if (completionRate > previousCompletionRate) {
-      setPreviousCompletionRate(completionRate);
-    }
+  const focusAdd = (name: string) => {
+    setTargetSection(name);
+    inputRef.current?.focus();
   };
 
-  const getNextOrder = () => {
-    if (!currentChecklist || currentChecklist.items.length === 0) return 0;
-    return Math.max(...currentChecklist.items.map(i => i.order)) + 1;
+  const cycleSection = () => {
+    if (sectionNames.length < 2) return;
+    const i = sectionNames.indexOf(section);
+    setTargetSection(sectionNames[(i + 1) % sectionNames.length]);
+    haptic.select();
   };
 
-  const handleAddRecommendation = async (title: string, description: string) => {
-    if (!currentChecklist) return;
-
-    try {
-      await addItem(currentChecklist.id, {
-        title,
-        description,
-        quantity: 1,
-        unit: '',
-        order: getNextOrder(),
-        isCompleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      Alert.alert('추가됨! 🎉', `"${title}"가 체크리스트에 추가되었습니다.`);
-    } catch (error) {
-      Alert.alert('오류', '항목 추가에 실패했습니다.');
-    }
-  };
-
-  const handleDeleteItem = (itemId: string) => {
-    if (!currentChecklist) return;
-    
-    const item = currentChecklist.items.find(item => item.id === itemId);
-    if (!item) return;
-    
-    Alert.alert(
-      '항목 삭제',
-      `"${item.title}"를 정말 삭제하시겠습니까?`,
-      [
-        {
-          text: '취소',
-          style: 'cancel',
+  const confirmDelete = () => {
+    setMenu(false);
+    Alert.alert(checklist.title, '이 리스트를 삭제할까요? 되돌릴 수 없어요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive', onPress: async () => {
+          await deleteChecklist(checklist.id);
+          navigation.goBack();
         },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => deleteItem(itemId),
-        },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleAddNewItem = async () => {
-    if (!currentChecklist) return;
-    
-    const trimmedTitle = newItemTitle.trim();
-    if (!trimmedTitle) {
-      Alert.alert('오류', '항목 이름을 입력해주세요.');
-      return;
-    }
-    
-    try {
-      await addItem(currentChecklist.id, {
-        title: trimmedTitle,
-        description: newItemDescription.trim(),
-        quantity: 1,
-        unit: '',
-        order: getNextOrder(),
-        isCompleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      
-      setNewItemTitle('');
-      setNewItemDescription('');
-      setShowAddForm(false);
-      Alert.alert('추가됨! 🎉', `"${trimmedTitle}"가 추가되었습니다.`);
-    } catch (error) {
-      Alert.alert('오류', '항목 추가에 실패했습니다.');
-    }
+  const reuse = async () => {
+    setMenu(false);
+    setCompleted(false);
+    await resetChecklist(checklist.id);
+    haptic.select();
   };
 
-  const handleDelete = () => {
-    if (!currentChecklist) return;
-
-    Alert.alert(
-      '체크리스트 삭제',
-      `"${currentChecklist.title}" 체크리스트를 정말 삭제하시겠습니까?`,
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteChecklist(currentChecklist.id);
-            navigation.goBack();
-          },
-        },
-      ]
-    );
+  const canRemind = !!start && getReminderDate(start).getTime() > Date.now();
+  const toggleReminder = async () => {
+    const on = !checklist.reminderId;
+    const ok = await setReminder(checklist.id, on);
+    if (on && !ok) Alert.alert('알림을 켜지 못했어요', '휴대폰 설정에서 아맞다이거! 알림을 허용해 주세요.');
   };
-
-  if (loading && !currentChecklist) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>로딩 중...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !currentChecklist) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {error || '체크리스트를 찾을 수 없습니다.'}
-          </Text>
-          <Button 
-            title="다시 시도" 
-            onPress={() => fetchChecklist(id)}
-            style={styles.retryButton}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const completedItems = currentChecklist.items.filter(item => item.isCompleted);
-  const totalItems = currentChecklist.items.length;
-  const progress = totalItems > 0 ? (completedItems.length / totalItems) * 100 : 0;
 
   return (
-    <View style={styles.container}>
-      {/* Progress Header */}
-      <Card style={styles.progressCard}>
-        {/* Editable Title */}
-        <EditableTitle
-          title={currentChecklist.title}
-          onSave={handleTitleSave}
-          style={styles.editableTitle}
-        />
-        
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>진행률</Text>
-          <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
-        </View>
-        
-        <View style={styles.progressBar}>
-          <View 
-            style={[styles.progressFill, { width: `${progress}%` }]} 
-          />
-        </View>
-        
-        <Text style={styles.progressText}>
-          {completedItems.length}/{totalItems} 항목 완료
-        </Text>
-        
-        {currentChecklist.description && (
-          <Text style={styles.description}>
-            {currentChecklist.description}
-          </Text>
-        )}
-      </Card>
-
-      {/* Items List */}
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-      >
-        {/* Smart AI Recommendations */}
-        <SmartRecommendations
-          currentItems={currentChecklist.items}
-          templateCategory={currentChecklist.categoryId}
-          onAddRecommendation={handleAddRecommendation}
-        />
-
-        {[...currentChecklist.items]
-          .sort((a, b) => a.order - b.order)
-          .map((item) => (
-            <ChecklistItemComponent
-              key={item.id}
-              item={item}
-              onToggle={handleItemToggle}
-              onPress={() => handleItemToggle(item.id)}
-              onEdit={handleEditItem}
-              onDelete={handleDeleteItem}
-              showDeleteButton={true}
-            />
-          ))}
-
-        {/* Add New Item Section */}
-        <View style={styles.addSection}>
-          {!showAddForm ? (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowAddForm(true)}
-            >
-              <Text style={styles.addButtonText}>+ 항목 추가</Text>
-            </TouchableOpacity>
-          ) : (
-            <Card style={styles.addForm}>
-              <Text style={styles.addFormTitle}>새 항목 추가</Text>
-              
-              <TextInput
-                style={styles.addInput}
-                placeholder="항목 이름 (필수)"
-                value={newItemTitle}
-                onChangeText={setNewItemTitle}
-                autoFocus
-                maxLength={50}
-              />
-              
-              <TextInput
-                style={[styles.addInput, styles.addInputDescription]}
-                placeholder="설명 (선택)"
-                value={newItemDescription}
-                onChangeText={setNewItemDescription}
-                multiline
-                maxLength={100}
-              />
-              
-              <View style={styles.addFormButtons}>
-                <TouchableOpacity
-                  style={styles.addCancelButton}
-                  onPress={() => {
-                    setShowAddForm(false);
-                    setNewItemTitle('');
-                    setNewItemDescription('');
-                  }}
-                >
-                  <Text style={styles.addCancelText}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addConfirmButton}
-                  onPress={handleAddNewItem}
-                >
-                  <Text style={styles.addConfirmText}>추가</Text>
-                </TouchableOpacity>
-              </View>
-            </Card>
-          )}
-        </View>
-        
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={[styles.actionButtons, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Button
-          title="공유하기"
-          onPress={handleShare}
-          variant="outline"
-          style={styles.actionButton}
-        />
-        <Button
-          title="삭제"
-          onPress={handleDelete}
-          variant="outline"
-          style={StyleSheet.flatten([styles.actionButton, styles.deleteButton])}
-          textStyle={styles.deleteButtonText}
-        />
-      </View>
-
-      {/* Celebration Modal */}
-      <CelebrationModal
-        visible={showCelebration}
-        onClose={() => setShowCelebration(false)}
-        checklistTitle={currentChecklist.title}
-        completionRate={Math.round(progress)}
+    <View style={s.root}>
+      <TopBar
+        onBack={() => navigation.goBack()}
+        right={
+          <>
+            <IconButton icon="share" label="공유" onPress={() => setSharing(true)} />
+            <IconButton icon="more" label="더 보기" onPress={() => setMenu(true)} />
+          </>
+        }
       />
-
-      {/* Enhanced Share Modal */}
-      <EnhancedShareModal
-        visible={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        checklist={currentChecklist}
-      />
-
-      {/* 항목 수정 모달 */}
-      <Modal
-        visible={!!editingItem}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditingItem(null)}
-      >
-        <TouchableOpacity
-          style={styles.editModalOverlay}
-          activeOpacity={1}
-          onPress={() => setEditingItem(null)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.editModalContent}>
-            <Text style={styles.editModalTitle}>항목 수정</Text>
-            <Text style={styles.editModalLabel}>이름 *</Text>
-            <TextInput
-              style={styles.editModalInput}
-              value={editTitle}
-              onChangeText={setEditTitle}
-              placeholder="항목 이름"
-              autoFocus
-            />
-            <Text style={styles.editModalLabel}>설명 (선택)</Text>
-            <TextInput
-              style={[styles.editModalInput, { minHeight: 60 }]}
-              value={editDescription}
-              onChangeText={setEditDescription}
-              placeholder="설명을 입력하세요"
-              multiline
-            />
-            <View style={styles.editModalButtons}>
-              <TouchableOpacity
-                style={styles.editModalCancel}
-                onPress={() => setEditingItem(null)}
-              >
-                <Text style={styles.editModalCancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.editModalSave}
-                onPress={handleSaveEdit}
-              >
-                <Text style={styles.editModalSaveText}>저장</Text>
-              </TouchableOpacity>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24 }}>
+          <View style={s.head}>
+            {!!meta && <T size={14} tone="text3">{meta}</T>}
+            <View style={s.titleRow}>
+              <T variant="title1" style={{ flex: 1 }}>{checklist.title}</T>
+              {start && days != null && days >= 0 && <T variant="title1" tone="accent">{formatDday(start)}</T>}
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+            <ProgressBar ratio={ratio} style={{ marginTop: 16 }} />
+            <View style={s.progressRow}>
+              <T variant="body2" tone="text2">
+                {total === 0 ? '아래에서 첫 항목을 추가해 보세요' : done === total ? `${total}개 모두 챙겼어요` : `${total}개 중 ${done}개 챙겼어요`}
+              </T>
+              {total > 0 && <T size={15} weight="semibold">{Math.round(ratio * 100)}%</T>}
+            </View>
+          </View>
+
+          {total > 0 && (
+            <ChipRow style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+              <Chip label={`전체 ${total}`} selected={filter === 'all'} onPress={() => setFilter('all')} />
+              <Chip label={`남은 것 ${left}`} selected={filter === 'left'} onPress={() => setFilter('left')} />
+              <Chip label={`챙긴 것 ${done}`} selected={filter === 'done'} onPress={() => setFilter('done')} />
+            </ChipRow>
+          )}
+
+          {!!checklist.cautions?.length && (
+            <Tap accessibilityRole="button" onPress={() => setCautionsOpen(!cautionsOpen)} style={s.caution}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon name="info" size={20} color={c.accentStrong} />
+                <T size={15} weight="semibold" style={{ flex: 1 }}>주의할 점 {checklist.cautions.length}가지</T>
+                <Icon name={cautionsOpen ? 'chevronUp' : 'chevronDown'} size={18} color={c.text3} strokeWidth={2} />
+              </View>
+              {cautionsOpen && checklist.cautions.map((text, i) => (
+                <T key={i} variant="caption" tone="text2" style={{ marginTop: 8, paddingLeft: 30 }}>· {text}</T>
+              ))}
+            </Tap>
+          )}
+
+          {sections.map(sec => {
+            if (filter !== 'all' && sec.items.length === 0) return null;
+            const isCollapsed = collapsed[sec.name];
+            return (
+              <View key={sec.name}>
+                <View style={s.band} />
+                <Tap
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: !isCollapsed }}
+                  onPress={() => setCollapsed({ ...collapsed, [sec.name]: !isCollapsed })}
+                  style={s.sectionHead}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                    <T variant="title3">{sec.name}</T>
+                    <T size={14} tone="text3">{sec.done}/{sec.total}</T>
+                  </View>
+                  <Icon name={isCollapsed ? 'chevronDown' : 'chevronUp'} size={20} color={c.text3} strokeWidth={2} />
+                </Tap>
+                {!isCollapsed && sec.items.map(item => (
+                  <ItemRow key={item.id} item={item} abroad={abroad} onPress={() => toggle(item)} onLongPress={() => { haptic.light(); setEditing(item); }} />
+                ))}
+                {!isCollapsed && filter === 'all' && (
+                  <Tap accessibilityRole="button" onPress={() => focusAdd(sec.name)} style={s.addRow}>
+                    <View style={{ width: 24, alignItems: 'center' }}><Icon name="plus" size={20} color={c.text3} strokeWidth={2} /></View>
+                    <T size={15} tone="text3">{sec.name}에 추가</T>
+                  </Tap>
+                )}
+              </View>
+            );
+          })}
+          {total > 0 && (
+            <T variant="caption" tone="text3" center style={{ marginTop: 16 }}>항목을 길게 누르면 고치거나 지울 수 있어요</T>
+          )}
+        </ScrollView>
+
+        <View style={[s.bottom, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={s.inputPill}>
+            <TextInput
+              ref={inputRef}
+              value={newTitle}
+              onChangeText={setNewTitle}
+              placeholder="항목 추가"
+              placeholderTextColor={c.placeholder}
+              returnKeyType="done"
+              blurOnSubmit={false}
+              onSubmitEditing={add}
+              maxLength={100}
+              style={s.input}
+            />
+            {sectionNames.length > 1 && (
+              <Tap accessibilityRole="button" accessibilityLabel={`추가할 섹션: ${section}`} onPress={cycleSection} style={s.sectionPick}>
+                <T size={13} weight="semibold" tone="text2" numberOfLines={1} style={{ maxWidth: 90 }}>{section}</T>
+                <Icon name="chevronDown" size={14} color={c.text2} strokeWidth={2.2} />
+              </Tap>
+            )}
+          </View>
+          <Tap accessibilityRole="button" accessibilityLabel="항목 추가" onPress={add} disabled={!newTitle.trim()}
+            style={[s.addButton, !newTitle.trim() && { opacity: 0.5 }]}>
+            <Icon name="plus" size={24} color={c.onAccent} strokeWidth={2.2} />
+          </Tap>
+        </View>
+      </KeyboardAvoidingView>
+
+      <EditItemSheet
+        item={editing}
+        onClose={() => setEditing(null)}
+        onSave={async (patch) => { if (editing) await updateItem(editing.id, patch); setEditing(null); }}
+        onDelete={async () => { if (editing) await deleteItem(editing.id); setEditing(null); }}
+      />
+
+      <Sheet visible={menu} onClose={() => setMenu(false)}>
+        <SheetRow icon="pencil" label="이름 바꾸기" onPress={() => { setMenu(false); setRenaming(true); }} />
+        {canRemind && (
+          <SheetRow
+            icon="bell"
+            label={checklist.reminderId ? '전날 알림 끄기' : '전날 알림 켜기'}
+            sub="출발 전날 오후 8시"
+            onPress={() => { setMenu(false); toggleReminder(); }}
+          />
+        )}
+        {done > 0 && <SheetRow icon="refresh" label="다시 쓰기" sub="체크만 모두 풀어요" onPress={reuse} />}
+        <SheetRow icon="trash" label="리스트 삭제" danger onPress={confirmDelete} />
+      </Sheet>
+
+      <Sheet visible={sharing} onClose={() => setSharing(false)} title="리스트 보내기">
+        <SheetRow icon="message" label="앱으로 보내기" sub="받은 사람이 아맞다이거!에서 바로 가져가요"
+          onPress={() => { setSharing(false); shareChecklist(checklist, 'app'); }} />
+        <SheetRow icon="doc" label="텍스트로 보내기" sub="앱이 없어도 목록을 읽을 수 있어요"
+          onPress={() => { setSharing(false); shareChecklist(checklist, 'text'); }} />
+      </Sheet>
+
+      <RenameSheet
+        visible={renaming}
+        initial={checklist.title}
+        onClose={() => setRenaming(false)}
+        onSave={async (title) => { await updateChecklist(checklist.id, { title }); setRenaming(false); }}
+      />
+
+      <Sheet visible={completed} onClose={() => setCompleted(false)}>
+        <View style={{ alignItems: 'center', gap: 8, paddingVertical: 12 }}>
+          <View style={s.doneIcon}><Icon name="check" size={32} color={c.onAccent} strokeWidth={3} /></View>
+          <T variant="title2" center style={{ marginTop: 8 }}>다 챙겼어요</T>
+          <T variant="body2" tone="text2" center>{total}개를 모두 챙겼어요. 다음에 또 쓸 때는{'\n'}'다시 쓰기'로 체크만 풀 수 있어요</T>
+        </View>
+        <Button label="확인" onPress={() => setCompleted(false)} style={{ marginTop: 8 }} />
+        <Button label="지금 다시 쓰기" kind="ghost" onPress={reuse} />
+      </Sheet>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
+const ItemRow = ({ item, abroad, onPress, onLongPress }: {
+  item: ChecklistItem; abroad: boolean; onPress: () => void; onLongPress: () => void;
+}) => {
+  const s = useStyles();
+  const sub = cleanText(item.reason || item.description);
+  const showQty = (item.quantity ?? 1) > 1;
+  return (
+    <Tap
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: item.isCompleted }}
+      accessibilityLabel={item.title}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      pressedOpacity={0.7}
+      style={[s.item, !!sub && { paddingVertical: 10 }]}
+    >
+      <Checkbox checked={item.isCompleted} />
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <T variant="body1" tone={item.isCompleted ? 'text3' : 'text1'} style={{ flexShrink: 1 }}>{item.title}</T>
+          {abroad && item.baggage === 'carry_on' && !item.isCompleted && <Badge label="기내만" />}
+        </View>
+        {!!sub && !item.isCompleted && <T variant="caption" tone="text3" numberOfLines={2}>{sub}</T>}
+      </View>
+      {showQty && <T size={15} tone="text3">{item.quantity}{item.unit || '개'}</T>}
+    </Tap>
+  );
+};
+
+const EditItemSheet = ({ item, onClose, onSave, onDelete }: {
+  item: ChecklistItem | null; onClose: () => void;
+  onSave: (patch: Partial<ChecklistItem>) => void; onDelete: () => void;
+}) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  useEffect(() => {
+    if (item) {
+      setTitle(item.title);
+      setDescription(cleanText(item.description));
+      setQuantity(item.quantity ?? 1);
+    }
+  }, [item]);
+  const c = useColors();
+  return (
+    <Sheet visible={!!item} onClose={onClose} title="항목 고치기">
+      <View style={{ gap: 12 }}>
+        <Field label="이름" value={title} onChangeText={setTitle} maxLength={100} />
+        <Field label="메모" value={description} onChangeText={setDescription} placeholder="예: 여분 하나 더" maxLength={200} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <T size={14} weight="semibold" tone="text2" style={{ flex: 1 }}>수량</T>
+          <IconButton icon="minus" label="수량 줄이기" color={c.text1} onPress={() => setQuantity(Math.max(1, quantity - 1))} />
+          <T size={17} weight="bold" center style={{ minWidth: 48 }}>{quantity}{item?.unit || '개'}</T>
+          <IconButton icon="plus" label="수량 늘리기" color={c.text1} onPress={() => setQuantity(Math.min(9999, quantity + 1))} />
+        </View>
+      </View>
+      <Button
+        label="저장"
+        disabled={!title.trim()}
+        style={{ marginTop: 16 }}
+        onPress={() => onSave({
+          title: title.trim(),
+          // 메모를 고쳤을 때만 바꾼다 (템플릿 원문 보존)
+          ...(description !== cleanText(item?.description) ? { description: description.trim() || undefined } : {}),
+          quantity,
+        })}
+      />
+      <Button label="이 항목 지우기" kind="dangerGhost" onPress={onDelete} />
+    </Sheet>
+  );
+};
+
+const RenameSheet = ({ visible, initial, onClose, onSave }: {
+  visible: boolean; initial: string; onClose: () => void; onSave: (title: string) => void;
+}) => {
+  const [title, setTitle] = useState(initial);
+  useEffect(() => { if (visible) setTitle(initial); }, [visible, initial]);
+  return (
+    <Sheet visible={visible} onClose={onClose} title="이름 바꾸기">
+      <Field value={title} onChangeText={setTitle} autoFocus maxLength={40} onSubmitEditing={() => title.trim() && onSave(title.trim())} />
+      <Button label="저장" disabled={!title.trim()} style={{ marginTop: 16 }} onPress={() => onSave(title.trim())} />
+    </Sheet>
+  );
+};
+
+const useStyles = makeStyles(c => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  head: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
+  titleRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  progressRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  caution: { marginHorizontal: 20, marginBottom: 16, borderRadius: 16, backgroundColor: c.fillSubtle, padding: 16 },
+  band: { height: 8, backgroundColor: c.band },
+  sectionHead: { height: 52, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  item: { minHeight: 56, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  addRow: { height: 48, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  bottom: {
+    backgroundColor: c.bg, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 12, paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
   },
-  progressCard: {
-    margin: 16,
-    marginBottom: 8,
+  inputPill: {
+    flex: 1, height: 56, borderRadius: 28, backgroundColor: c.fill, paddingLeft: 18, paddingRight: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  editableTitle: {
-    marginBottom: 16,
+  input: { flex: 1, height: 56, fontSize: 16, fontFamily: fonts.regular, color: c.text1, padding: 0 },
+  sectionPick: {
+    height: 44, paddingLeft: 14, paddingRight: 12, borderRadius: 22, backgroundColor: c.raised,
+    flexDirection: 'row', alignItems: 'center', gap: 2,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  progressPercentage: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#DC2626',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#DC2626',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#DC2626',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  actionButton: {
-    flex: 1,
-  },
-  deleteButton: {
-    borderColor: '#DC2626',
-  },
-  deleteButtonText: {
-    color: '#DC2626',
-  },
-  bottomPadding: {
-    height: 20,
-  },
-  addSection: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  addButton: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  addForm: {
-    padding: 16,
-  },
-  addFormTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  addInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: 'white',
-    marginBottom: 12,
-  },
-  addInputDescription: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  addFormButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  addCancelButton: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  addConfirmButton: {
-    flex: 1,
-    backgroundColor: '#DC2626',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addConfirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-  },
-  editModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  editModalContent: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-  },
-  editModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  editModalLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  editModalInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-    marginBottom: 14,
-  },
-  editModalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
-  },
-  editModalCancel: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editModalCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  editModalSave: {
-    flex: 1,
-    backgroundColor: '#DC2626',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editModalSaveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-  },
-});
+  addButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: c.accentStrong, alignItems: 'center', justifyContent: 'center' },
+  doneIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+}));
 
 export default ChecklistDetailScreen;
