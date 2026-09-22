@@ -21,7 +21,7 @@
 "plugins": [
   "./plugins/withPageAlignment",
   ["expo-build-properties", { "android": { "compileSdkVersion": 36, "targetSdkVersion": 36 } }],
-  ["expo-splash-screen", { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#DC2626" }],
+  ["expo-splash-screen", { "image": "./assets/splash-icon.png", "resizeMode": "contain", "imageWidth": 120, "backgroundColor": "#FFFFFF", "dark": { "backgroundColor": "#111214" } }],
   ["expo-font", { "fonts": ["./assets/fonts/Pretendard-*.otf (Regular/Medium/SemiBold/Bold)"] }],
   ["expo-notifications", { "color": "#F2553D" }]
 ]
